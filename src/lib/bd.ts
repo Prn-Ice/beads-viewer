@@ -5,7 +5,7 @@ const TIMEOUT_MS = 30_000;
 export function runBd(args: string[], cwd: string): Promise<unknown> {
   const beadsBin = process.env.BEADS_BIN ?? "bd";
   return new Promise((resolve, reject) => {
-    const child = spawn(beadsBin, [...args, "--json"], { cwd });
+    const child = spawn(/* turbopackIgnore: true */ beadsBin, [...args, "--json"], { cwd });
     let stdout = "";
     let stderr = "";
     const timer = setTimeout(() => {

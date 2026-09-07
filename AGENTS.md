@@ -41,6 +41,10 @@ npm run test:e2e     # Playwright integration tests (needs `npm run build` first
 - **User journeys need integration tests.** Cover the main flows (view
   projects → board → issue detail) with Playwright tests. Unit tests are for
   pure logic that earns them (discovery, parsing, bucketing).
+- **Accessibility is a requirement.** Everything must work with keyboard
+  navigation and screen readers. Most of this comes for free from shadcn/ui
+  primitives — keep custom controls on native elements (`button`, `a`) and
+  give icons/inputs accessible names.
 
 ## Architecture
 
