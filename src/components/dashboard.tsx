@@ -169,6 +169,7 @@ export function Dashboard() {
           <div className="relative ml-auto w-64">
             <SearchIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search title, id, label..."

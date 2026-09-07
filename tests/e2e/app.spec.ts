@@ -52,9 +52,9 @@ test.describe("board journey", () => {
     await page.getByRole("button", { name: "Change theme" }).click();
     await page.getByRole("menuitemradio", { name: "Dark" }).click();
     await expect(html).toHaveClass(/dark/);
-    await page.getByRole("button", { name: "Change theme" }).click();
     await page.getByRole("menuitemradio", { name: "Light" }).click();
     await expect(html).not.toHaveClass(/dark/);
+    await page.keyboard.press("Escape");
   });
 
   test("applies a color theme", async ({ page }) => {

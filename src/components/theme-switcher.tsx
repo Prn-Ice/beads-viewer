@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -53,30 +54,34 @@ export function ThemeSwitcher() {
         }
       />
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Mode</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
-          <DropdownMenuRadioItem value="light">
-            <SunIcon className="size-4" />
-            Light
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="dark">
-            <MoonIcon className="size-4" />
-            Dark
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="system">
-            <MonitorIcon className="size-4" />
-            System
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>Color</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={accent} onValueChange={applyAccent}>
-          {ACCENTS.map((option) => (
-            <DropdownMenuRadioItem key={option.value} value={option.value}>
-              {option.label}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Mode</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+            <DropdownMenuRadioItem value="light">
+              <SunIcon className="size-4" />
+              Light
             </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
+            <DropdownMenuRadioItem value="dark">
+              <MoonIcon className="size-4" />
+              Dark
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="system">
+              <MonitorIcon className="size-4" />
+              System
+            </DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Color</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={accent} onValueChange={applyAccent}>
+            {ACCENTS.map((option) => (
+              <DropdownMenuRadioItem key={option.value} value={option.value}>
+                {option.label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

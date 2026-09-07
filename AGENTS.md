@@ -45,6 +45,9 @@ npm run test:e2e     # Playwright integration tests (needs `npm run build` first
   navigation and screen readers. Most of this comes for free from shadcn/ui
   primitives — keep custom controls on native elements (`button`, `a`) and
   give icons/inputs accessible names.
+- **Documentation matters.** Simple, human-readable, straight to the point.
+  README and docs are part of the deliverable, and should be accompanied by
+  screenshots of the UI.
 
 ## Architecture
 
