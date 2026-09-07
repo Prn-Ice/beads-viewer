@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# view-beads
 
-## Getting Started
+A local web dashboard for [beads](https://github.com/steveyegge/beads) (`bd`)
+issue trackers. Run `view-beads` in any folder, get a link, open it in your
+browser. All of your beads projects are there — no configuration.
 
-First, run the development server:
+Built with Next.js, shadcn/ui and Tailwind. All data comes from the `bd` CLI,
+so nothing here ever writes to your databases.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+![Board (dark)](docs/screenshots/board-dark.png)
+
+## Install
+
+```sh
+# from this flake
+nix run github:Prn-Ice/beads-viewer
+
+# or add it to your home-manager packages
+inputs.view-beads.packages.x86_64-linux.default
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Requires `bd` (the `beads` package) — the nix package pulls it in
+automatically.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```sh
+cd ~/Projects/my-project
+view-beads            # starts the server and opens the browser
+view-beads --no-open  # only print the link
+```
 
-## Learn More
+The server keeps running in the background. Running `view-beads` again reuses
+it and just re-opens the browser.
 
-To learn more about Next.js, take a look at the following resources:
+### Which projects are shown?
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Every beads project found on your machine, in this order:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. The project in your current folder (or any parent folder)
+2. Workspaces registered in `~/.beads/registry.json`
+3. Any folder containing `.beads` under `~/Projects` or `~/Dotfiles`
+   (3 levels deep)
 
-## Deploy on Vercel
+Override the search roots with `BEADS_PROJECT_ROOTS=/path/a,/path/b`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Features
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Board with Ready / In Progress / Blocked / Backlog (and Closed) columns
+- Issue drawer with description, acceptance criteria, notes, comments,
+  and clickable dependency links
+- Search, open/all toggle, 10-second auto-refresh
+- Light / dark / system mode and color themes
+- Keyboard navigable and screen-reader friendly
+
+![Issue drawer](docs/screenshots/issue-drawer.png)
+
+![Theme menu](docs/screenshots/theme-menu.png)
+
+## Development
+
+```sh
+nix develop       # node, git, playwright with browsers
+npm run dev       # dev server on http://localhost:3000
+npm test          # unit tests (vitest)
+npm run test:e2e  # integration tests (playwright)
+npm run lint      # eslint
+npm run build     # production build (.next/standalone)
+```
+
+Environment variables: `BEADS_BIN` (path to `bd`), `BEADS_HOME` (where
+`registry.json` lives), `BEADS_PROJECT_ROOTS`, `VIEW_BEADS_SERVER` (built
+`server.js`), `VIEW_BEADS_NO_OPEN`.
+
+## Architecture
+
+- `src/lib/bd.ts` — spawns `bd --json`, the only data access
+- `src/lib/discovery.ts` — finds beads projects
+- `src/lib/cache.ts` — small TTL cache over `bd` output
+- `src/app/api/*` — thin JSON endpoints
+- `src/components/*` — board, sidebar, issue drawer
+- `bin/view-beads.mjs` — CLI wrapper
