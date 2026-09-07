@@ -14,7 +14,12 @@
         packages = with pkgs; [
           nodejs_24
           git
+          playwright
         ];
+        PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright.browsers}";
+        shellHook = ''
+          export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright.browsers}"
+        '';
       };
   };
 }
