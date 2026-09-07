@@ -1,11 +1,11 @@
 import { spawn } from "node:child_process";
 
-const BEADS_BIN = process.env.BEADS_BIN ?? "bd";
 const TIMEOUT_MS = 30_000;
 
 export function runBd(args: string[], cwd: string): Promise<unknown> {
+  const beadsBin = process.env.BEADS_BIN ?? "bd";
   return new Promise((resolve, reject) => {
-    const child = spawn(BEADS_BIN, [...args, "--json"], { cwd });
+    const child = spawn(beadsBin, [...args, "--json"], { cwd });
     let stdout = "";
     let stderr = "";
     const timer = setTimeout(() => {

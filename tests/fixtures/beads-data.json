@@ -1,0 +1,152 @@
+{
+  "status": {
+    "summary": {
+      "total_issues": 6,
+      "open_issues": 5,
+      "in_progress_issues": 1,
+      "blocked_issues": 1,
+      "closed_issues": 1,
+      "deferred_issues": 0,
+      "ready_issues": 2,
+      "pinned_issues": 0
+    }
+  },
+  "list": [
+    {
+      "id": "alpha-1",
+      "title": "Fix crash on startup",
+      "description": "Long description that should be stripped from the board",
+      "notes": "Long notes that should be stripped from the board",
+      "status": "in_progress",
+      "priority": 0,
+      "issue_type": "bug",
+      "assignee": "dev-a",
+      "labels": ["critical"],
+      "created_at": "2026-09-01T10:00:00Z",
+      "updated_at": "2026-09-02T10:00:00Z",
+      "dependency_count": 1,
+      "dependent_count": 0,
+      "comment_count": 2
+    },
+    {
+      "id": "alpha-2",
+      "title": "Add export feature",
+      "status": "blocked",
+      "priority": 1,
+      "issue_type": "feature",
+      "assignee": "dev-b",
+      "labels": [],
+      "created_at": "2026-09-01T11:00:00Z",
+      "updated_at": "2026-09-03T11:00:00Z",
+      "dependency_count": 0,
+      "dependent_count": 1,
+      "comment_count": 0
+    },
+    {
+      "id": "alpha-3",
+      "title": "Write release notes",
+      "status": "open",
+      "priority": 2,
+      "issue_type": "chore",
+      "labels": ["docs"],
+      "created_at": "2026-09-04T09:00:00Z",
+      "updated_at": "2026-09-04T09:00:00Z",
+      "dependency_count": 0,
+      "dependent_count": 0,
+      "comment_count": 0
+    },
+    {
+      "id": "alpha-4",
+      "title": "Migrate database",
+      "status": "open",
+      "priority": 3,
+      "issue_type": "task",
+      "labels": [],
+      "created_at": "2026-09-02T09:00:00Z",
+      "updated_at": "2026-09-05T09:00:00Z",
+      "dependency_count": 0,
+      "dependent_count": 0,
+      "comment_count": 0
+    },
+    {
+      "id": "alpha-5",
+      "title": "Retire legacy endpoint",
+      "status": "closed",
+      "priority": 2,
+      "issue_type": "task",
+      "labels": [],
+      "created_at": "2026-08-01T09:00:00Z",
+      "updated_at": "2026-08-15T09:00:00Z",
+      "closed_at": "2026-08-15T09:00:00Z",
+      "dependency_count": 0,
+      "dependent_count": 0,
+      "comment_count": 1
+    }
+  ],
+  "ready": [
+    {
+      "id": "alpha-3",
+      "title": "Write release notes",
+      "status": "open",
+      "priority": 2,
+      "issue_type": "chore",
+      "created_at": "2026-09-04T09:00:00Z",
+      "updated_at": "2026-09-04T09:00:00Z",
+      "dependency_count": 0,
+      "dependent_count": 0,
+      "comment_count": 0
+    }
+  ],
+  "show": {
+    "alpha-1": [
+      {
+        "id": "alpha-1",
+        "title": "Fix crash on startup",
+        "description": "The app **crashes** when launched with no config.\n\n- Step 1\n- Step 2",
+        "acceptance_criteria": "App starts without a config file",
+        "notes": "Related to the recent refactor",
+        "status": "in_progress",
+        "priority": 0,
+        "issue_type": "bug",
+        "assignee": "dev-a",
+        "created_at": "2026-09-01T10:00:00Z",
+        "updated_at": "2026-09-02T10:00:00Z",
+        "started_at": "2026-09-01T12:00:00Z",
+        "labels": ["critical"],
+        "parent": "alpha-0",
+        "dependencies": [
+          {
+            "id": "alpha-0",
+            "title": "Stabilize the 1.0 release",
+            "status": "open",
+            "issue_id": "alpha-1",
+            "depends_on_id": "alpha-0",
+            "type": "parent-child"
+          }
+        ],
+        "dependents": [],
+        "dependency_count": 1,
+        "dependent_count": 0,
+        "comment_count": 2
+      }
+    ]
+  },
+  "comments": {
+    "alpha-1": [
+      {
+        "id": "c1",
+        "issue_id": "alpha-1",
+        "author": "dev-a",
+        "text": "Reproduced with `--no-config`",
+        "created_at": "2026-09-01T12:30:00Z"
+      },
+      {
+        "id": "c2",
+        "issue_id": "alpha-1",
+        "author": "dev-b",
+        "text": "Fix merged in #42",
+        "created_at": "2026-09-02T08:00:00Z"
+      }
+    ]
+  }
+}
