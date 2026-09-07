@@ -121,7 +121,7 @@ export function Dashboard() {
     <SidebarProvider className="flex min-h-screen w-full flex-1">
       <Sidebar>
         <SidebarHeader className="flex-col items-start gap-1">
-          <span className="text-base font-semibold">view-beads</span>
+          <span className="text-base font-semibold">View Beads</span>
           <span className="text-xs text-muted-foreground">beads issue dashboard</span>
         </SidebarHeader>
         <SidebarContent>
@@ -164,7 +164,7 @@ export function Dashboard() {
         <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
           <SidebarTrigger />
           <h1 className="truncate text-sm font-medium">
-            {selectedProject?.name ?? "view-beads"}
+            {selectedProject?.name ?? "View Beads"}
           </h1>
           <div className="relative ml-auto w-64">
             <SearchIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
