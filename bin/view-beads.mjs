@@ -2,7 +2,8 @@
 // view-beads: start (or reuse) the local dashboard server and open it in the browser.
 
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -51,26 +52,50 @@ function resolveServerPath() {
   return null;
 }
 
-async function healthOk(url) {
+function buildId(serverPath) {
+  return String(statSync(serverPath).mtimeMs);
+}
+
+function pidFile(port) {
+  return join(tmpdir(), `view-beads-${port}.pid`);
+}
+
+async function health(url) {
   try {
     const res = await fetch(`${url}/api/health`, {
       signal: AbortSignal.timeout(1_500),
     });
-    if (!res.ok) return false;
+    if (!res.ok) return null;
     const body = await res.json();
-    return body.app === "view-beads";
+    return body.app === "view-beads" ? body : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-async function waitForHealth(url, timeoutMs) {
+async function waitFor(url, timeoutMs, want) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (await healthOk(url)) return true;
+    const body = await health(url);
+    if (want ? body : !body) return body;
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
-  return false;
+  return null;
+}
+
+function stopServer(port) {
+  const file = pidFile(port);
+  try {
+    const pid = Number(readFileSync(file, "utf8").trim());
+    process.kill(pid, "SIGTERM");
+  } catch {
+    return;
+  }
+  try {
+    unlinkSync(file);
+  } catch {
+    /* already gone */
+  }
 }
 
 function openBrowser(url) {
@@ -79,15 +104,21 @@ function openBrowser(url) {
   child.unref();
 }
 
-function startServer(serverPath, port, host) {
+function startServer(serverPath, port, host, id) {
   const child = spawn(process.execPath, [serverPath], {
-    env: { ...process.env, PORT: String(port), HOSTNAME: host },
+    env: {
+      ...process.env,
+      PORT: String(port),
+      HOSTNAME: host,
+      VIEW_BEADS_BUILD: id,
+    },
     cwd: process.cwd(),
     stdio: "ignore",
     detached: true,
   });
   child.on("error", () => {});
   child.unref();
+  writeFileSync(pidFile(port), String(child.pid));
 }
 
 async function main() {
@@ -99,19 +130,26 @@ async function main() {
     );
     process.exit(1);
   }
+  const id = buildId(serverPath);
 
   for (let attempt = 0; attempt < MAX_PORT_TRIES; attempt++) {
     const candidatePort = port + attempt;
     const url = `http://${host}:${candidatePort}`;
 
-    if (await healthOk(url)) {
+    const running = await health(url);
+    if (running && running.build === id) {
       console.log(`view-beads (already running): ${url}`);
       if (open) openBrowser(url);
       return;
     }
 
-    startServer(serverPath, candidatePort, host);
-    if (await waitForHealth(url, STARTUP_TIMEOUT_MS)) {
+    if (running) {
+      stopServer(candidatePort);
+      await waitFor(url, 3_000, false);
+    }
+
+    startServer(serverPath, candidatePort, host, id);
+    if (await waitFor(url, STARTUP_TIMEOUT_MS, true)) {
       console.log(`view-beads: ${url}`);
       if (open) openBrowser(url);
       return;
