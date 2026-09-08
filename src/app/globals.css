@@ -196,5 +196,9 @@
   }
   html {
     @apply font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  code, pre {
+    font-feature-settings: normal;
   }
 }

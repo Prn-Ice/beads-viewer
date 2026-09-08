@@ -18,6 +18,12 @@ The live site's CSS explicitly selects Paper Mono for both body and headings
 (`--font-family-body-custom` and `--font-family-headings-custom`). Inter is
 also preloaded by Mintlify but is not the configured body/heading font.
 
+Typography follows the site's 16px/24px body baseline, 36px/40px main headings,
+and 24px/32px section headings. Headings use weight 600 and -0.025em letter
+spacing; compact dashboard controls and issue metadata retain their smaller sizes.
+The site's `cv02`, `cv03`, `cv04`, and `cv11` font-feature settings are enabled
+for UI text, with default features for code.
+
 `paper-mono.woff2` is an unchanged copy of the [live site's variable font](https://beads.gascity.com/mintlify-assets/_next/static/media/PaperMono_Variable.p.aa32f7a0.woff2),
 SHA-256 `ca2fbd40c7f5c39cc00fb8d754ca542079841477d36febd502137ab61a70a1fb`.
 It is self-hosted through `next/font/local`; no CDN requests are needed at runtime

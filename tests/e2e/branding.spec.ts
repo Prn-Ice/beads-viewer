@@ -30,6 +30,17 @@ for (const mode of ["light", "dark"] as const) {
     await page.evaluate(() => document.fonts.ready);
     await expect(page.locator("body")).toHaveCSS("background-color", mode === "light" ? "rgb(249, 251, 250)" : "rgb(11, 14, 14)");
     expect(await page.evaluate(() => [...document.fonts].some((font) => font.family.includes("paperMono") && font.status === "loaded"))).toBe(true);
+    await expect(page.locator("body")).toHaveCSS("font-feature-settings", '"cv02", "cv03", "cv04", "cv11"');
+    const title = page.getByRole("heading", { name: "alpha", exact: true });
+    await expect(title).toHaveCSS("font-size", "36px");
+    await expect(title).toHaveCSS("line-height", "40px");
+    await expect(title).toHaveCSS("font-weight", "600");
+    await expect(title).toHaveCSS("letter-spacing", "-0.9px");
+    const columnTitle = page.getByRole("heading", { name: "Ready", exact: true });
+    await expect(columnTitle).toHaveCSS("font-size", "24px");
+    await expect(columnTitle).toHaveCSS("line-height", "32px");
+    await expect(columnTitle).toHaveCSS("font-weight", "600");
+    await expect(columnTitle).toHaveCSS("letter-spacing", "-0.6px");
     const logo = page.getByRole("img", { name: "Beads", exact: true }).filter({ visible: true });
     await expect(logo).toHaveCount(1);
     expect(await logo.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBe(32);

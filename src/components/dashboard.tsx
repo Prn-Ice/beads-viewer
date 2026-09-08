@@ -176,7 +176,7 @@ export function Dashboard() {
         <header className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-3 lg:gap-3">
           <SidebarTrigger />
           <Image src="/brand/beads.svg" alt="Beads" width={24} height={24} unoptimized className="md:hidden" />
-          <h1 className="min-w-0 flex-1 truncate text-sm font-medium">
+          <h1 className="min-w-0 flex-1 basis-[calc(100%-5rem)] truncate text-4xl font-semibold tracking-tight lg:basis-0">
             {selectedProject?.name ?? "View Beads"}
           </h1>
           <div className="relative order-last w-full lg:order-none lg:ml-auto lg:w-64">
