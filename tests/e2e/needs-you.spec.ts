@@ -157,6 +157,20 @@ test.describe("needs you inbox", () => {
     expect(params.get("project")).toBe(BETA);
     expect(params.get("issue")).toBe("beta-2");
     expect(params.get("q")).toBe("crash");
+    let graphProject = "";
+    await page.route("**/issues/beta-2?relationships=all", (route) => {
+      graphProject = decodeURIComponent(new URL(route.request().url()).pathname.split("/")[3]);
+      return route.fulfill({ json: {
+        ...issue("beta-2", "Approve license change", 0),
+        dependencies: [{ id: "beta-review", title: "Review license", status: "open", priority: 1, dependency_type: "blocks" }],
+        dependents: [], dependency_count: 1, dependent_count: 0, comment_count: 0,
+      } });
+    });
+    await drawer.getByRole("tab", { name: /Dependencies/ }).click();
+    await drawer.locator("summary", { hasText: "Dependency graph" }).click();
+    await expect(drawer.getByRole("region", { name: "Dependency graph", exact: true })
+      .getByRole("button", { name: /beta-review: Review license/ })).toBeVisible();
+    expect(graphProject).toBe(BETA);
   });
 
   test("reports a total failure and can retry", async ({ page }) => {
