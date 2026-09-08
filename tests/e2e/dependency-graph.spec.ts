@@ -105,6 +105,11 @@ function graphRegion(drawer: import("@playwright/test").Locator) {
   return drawer.getByRole("region", { name: "Dependency graph", exact: true });
 }
 
+/** Locates the SVG edge group between two nodes of a given type. */
+function edgeLocator(container: import("@playwright/test").Locator, from: string, to: string, type: string) {
+  return container.locator(`g[data-edge="${from}>${to}:${type}"]`);
+}
+
 function expandNodeButton(drawer: import("@playwright/test").Locator, id: string) {
   return drawer.getByRole("button", { name: `Expand node ${id}`, exact: true });
 }
@@ -121,15 +126,21 @@ for (const width of [1280, 390]) {
     await expect(graphRegion(drawer).getByRole("button", { name: /b: Issue b/ })).toBeVisible();
     await expect(graphRegion(drawer).getByRole("button", { name: /d: Issue d/ })).toBeVisible();
     await expect.poll(() => requests).toEqual(["alpha-1"]);
+    // The graph is wider than the bounded preview (upstream left, root center,
+    // downstream right); scroll the root into view so the assertion is about
+    // the visible canvas, not the off-screen area.
     await graphRegion(drawer).scrollIntoViewIfNeeded();
     await expect(graphRegion(drawer).getByRole("button", { name: /alpha-1: Issue alpha-1/ })).toBeInViewport({ ratio: 1 });
     await expect(graphRegion(drawer).getByRole("button", { name: /b: Issue b/ })).toContainText("P1");
 
-    // Typed edges are labelled and the legend explains them.
-    await expect(graphRegion(drawer)).toContainText("parent-child");
-    await expect(graphRegion(drawer)).toContainText("related");
-    await expect(graphRegion(drawer)).toContainText("conditional");
+    // The typed legend explains every relationship; edge labels are contextual
+    // (only the hovered/focused edge shows its type).
+    await expect(drawer).toContainText("parent-child");
+    await expect(drawer).toContainText("related");
+    await expect(drawer).toContainText("other/unknown");
     await expect(drawer.getByText(/Arrows point from the dependent to its prerequisite/)).toBeVisible();
+    // The conditional edge is present; its label is revealed on hover/focus.
+    await expect(edgeLocator(graphRegion(drawer), "alpha-1", "cond", "conditional")).toHaveCount(1);
 
     // Closed nodes are never expanded.
     await expect(expandNodeButton(drawer, "b")).toHaveCount(0);
@@ -142,7 +153,7 @@ for (const width of [1280, 390]) {
 
     // Expanding e exposes the cycle back to alpha-1 and stops there.
     await expandNodeButton(drawer, "e").click();
-    await expect(graphRegion(drawer)).toContainText("(cycle)");
+    await expect(edgeLocator(graphRegion(drawer), "alpha-1", "e", "blocks")).toHaveCount(1);
     await expect(drawer.getByText("Directed cycles are marked; each issue is visited once.")).toBeVisible();
     await expect.poll(() => requests).toEqual(["alpha-1", "d", "e"]);
 
@@ -150,8 +161,22 @@ for (const width of [1280, 390]) {
     await expect(graphRegion(drawer).getByRole("button", { name: /unresolved reference/i })).toBeVisible();
     expect(requests).not.toContain("__missing__");
 
-    await graphRegion(drawer).evaluate((element) => { element.scrollTop = 0; element.scrollLeft = 0; });
+    await graphRegion(drawer).evaluate((element) => {
+      element.scrollTop = 0;
+      element.scrollLeft = 0;
+    });
     await graphRegion(drawer).scrollIntoViewIfNeeded();
+    // Center the root node horizontally so the preview screenshot shows the
+    // upstream-left / root-center / downstream-right layout.
+    await graphRegion(drawer).evaluate((element) => {
+      const root = element.querySelector('[aria-current="true"]') as HTMLElement | null;
+      if (root) {
+        const rootLeft = root.getBoundingClientRect().left - element.getBoundingClientRect().left + element.scrollLeft;
+        element.scrollLeft = Math.max(0, rootLeft - (element.clientWidth - root.offsetWidth) / 2);
+        const rootTop = root.getBoundingClientRect().top - element.getBoundingClientRect().top + element.scrollTop;
+        element.scrollTop = Math.max(0, rootTop - (element.clientHeight - root.offsetHeight) / 2);
+      }
+    });
     if (width === 390) {
       // The dialog itself never overflows horizontally on mobile.
       expect(await drawer.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
@@ -192,10 +217,14 @@ test("keyboard users can expand nodes, open them, and use the list view", async 
   await openGraph(drawer);
   await drawer.locator("summary", { hasText: "List view" }).click();
   await expect(drawer.getByText(/^d: Issue d/).first()).toBeVisible();
+  // The accessible list retains every edge label even though the canvas only
+  // shows labels contextually on hover/focus.
+  await expect(drawer.getByText(/\(conditional\)/).first()).toBeVisible();
   await drawer.getByRole("button", { name: "Expand node d in list", exact: true }).click();
   await expect(drawer.getByRole("button", { name: "Expand node e in list", exact: true })).toBeVisible();
   await drawer.getByRole("button", { name: "Expand node e in list", exact: true }).click();
   await expect(drawer.getByText(/^alpha-1 → e/).first()).toBeVisible();
+  await expect(drawer.getByText(/cycle, not expanded/).first()).toBeVisible();
 });
 
 test("epic scope shows the parent epic and ALL direct children, denominator unfiltered", async ({ page }) => {
@@ -330,4 +359,115 @@ test("leaving epic scope cancels a late response", async ({ page }) => {
   await expect.poll(() => finished).toBe(true);
   await expect(drawer.getByRole("button", { name: "Back to neighborhood" })).toHaveCount(0);
   await expect(graphRegion(drawer).getByRole("button", { name: /alpha-1:/ })).toBeVisible();
+});
+
+function largeDialog(page: Page) {
+  return page.getByRole("dialog", { name: "Dependency graph" });
+}
+
+function graphStage(dialog: import("@playwright/test").Locator) {
+  return dialog.getByRole("region", { name: "Graph workspace", exact: true });
+}
+
+for (const width of [1280, 390]) {
+  test(`large view reuses preview state with no refetch, Escape restores focus at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const { drawer, requests } = await setup(page);
+    await openGraph(drawer);
+    await expandNodeButton(drawer, "d").click();
+    await expandNodeButton(drawer, "e").click();
+    await expect.poll(() => requests).toEqual(["alpha-1", "d", "e"]);
+
+    await drawer.getByRole("button", { name: "Expand graph", exact: true }).click();
+    const dialog = largeDialog(page);
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Reset zoom" })).toHaveText("100%");
+    const rootNode = dialog.getByRole("button", { name: /alpha-1: Issue alpha-1/ });
+    await expect(rootNode).toBeInViewport({ ratio: 1 });
+    expect((await rootNode.boundingBox())!.width).toBeGreaterThanOrEqual(180);
+    expect((await graphStage(dialog).boundingBox())!.height).toBeGreaterThan(844 * 0.75);
+
+    // The large view shares the exact loaded/expanded state: node e is present
+    // and toggling the view triggers no new request.
+    await expect(dialog.getByRole("button", { name: /e: Issue e/ })).toBeVisible();
+    expect(requests).toEqual(["alpha-1", "d", "e"]);
+
+    // Edge focus is exposed to assistive technology, not hidden by the SVG.
+    const edge = dialog.getByRole("img", { name: /blocks edge from alpha-1 to b/ });
+    const point = await edge.locator("path").first().evaluate((element) => {
+      const path = element as SVGPathElement;
+      const midpoint = path.getPointAtLength(path.getTotalLength() / 2);
+      const screen = new DOMPoint(midpoint.x, midpoint.y).matrixTransform(path.getScreenCTM()!);
+      return { x: screen.x, y: screen.y };
+    });
+    await page.mouse.move(point.x, point.y);
+    await expect(edge.locator("text")).toBeVisible();
+    await page.mouse.move(5, 5);
+    await expect(edge.locator("text")).toHaveCount(0);
+    await edge.focus();
+    await expect(edge.locator("text")).toHaveText("blocks");
+    await dialog.getByRole("button", { name: "Reset zoom" }).click();
+    await expect(rootNode).toBeInViewport({ ratio: 1 });
+
+    if (process.env.UPDATE_SCREENSHOTS) {
+      await dialog.screenshot({ path: `docs/screenshots/dependency-graph-large-${width}.png`, animations: "disabled" });
+    }
+
+    // Escape closes the dialog and restores focus to the Expand graph trigger.
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(drawer.getByRole("button", { name: "Expand graph", exact: true })).toBeFocused();
+
+    // Preview state is preserved after toggling back.
+    await expect(graphRegion(drawer).getByRole("button", { name: /e: Issue e/ })).toBeVisible();
+    expect(requests).toEqual(["alpha-1", "d", "e"]);
+  });
+}
+
+test("large view zoom in/out and fit controls work without body overflow", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 844 });
+  const { drawer } = await setup(page);
+  await openGraph(drawer);
+  await drawer.getByRole("button", { name: "Expand graph", exact: true }).click();
+  const dialog = largeDialog(page);
+  await expect(dialog).toBeVisible();
+
+  const stage = graphStage(dialog);
+  const width = () => stage.getByRole("button", { name: /alpha-1: Issue alpha-1/ }).evaluate((el) => el.getBoundingClientRect().width);
+  const before = await width();
+
+  await dialog.getByRole("button", { name: "Zoom in", exact: true }).click();
+  await expect.poll(width).toBeGreaterThan(before);
+  await expect(dialog.getByRole("button", { name: "Reset zoom" })).toHaveText("125%");
+  await dialog.getByRole("button", { name: "Expand node d", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: /e: Issue e/ })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Reset zoom" })).toHaveText("125%");
+
+  await dialog.getByRole("button", { name: "Zoom out", exact: true }).click();
+  await dialog.getByRole("button", { name: "Zoom out", exact: true }).click();
+  await dialog.getByRole("button", { name: "Fit graph to view", exact: true }).click();
+  const fits = await stage.evaluate((element) => element.scrollWidth <= element.clientWidth + 1 && element.scrollHeight <= element.clientHeight + 1);
+  expect(fits).toBe(true);
+  await dialog.getByRole("button", { name: "Reset zoom" }).click();
+  await expect(dialog.getByRole("button", { name: "Reset zoom" })).toHaveText("100%");
+  await dialog.locator("summary", { hasText: "Graph details and list" }).click();
+  await expect(dialog.getByRole("button", { name: /Scope to parent epic/ })).toBeVisible();
+
+  // The page body itself never overflows horizontally on mobile or desktop.
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+  ).toBe(true);
+});
+
+test("clicking a node in the large view opens the root drawer", async ({ page }) => {
+  const { drawer } = await setup(page);
+  await openGraph(drawer);
+  await drawer.getByRole("button", { name: "Expand graph", exact: true }).click();
+  const dialog = largeDialog(page);
+  await expect(dialog).toBeVisible();
+
+  await dialog.getByRole("button", { name: /d: Issue d/ }).click();
+  await expect(drawer.getByRole("heading", { name: "Issue d" })).toBeVisible();
+  await drawer.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(drawer.getByRole("heading", { name: "Issue alpha-1" })).toBeVisible();
 });

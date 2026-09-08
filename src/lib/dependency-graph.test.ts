@@ -8,6 +8,7 @@ import {
   epicGraph,
   graphViewBox,
   layoutGraph,
+  routeEdges,
 } from "./dependency-graph";
 import type { BeadsIssue, DependencyRef } from "./types";
 
@@ -176,28 +177,126 @@ describe("buildGraph neighborhood", () => {
 });
 
 describe("layoutGraph", () => {
-  it("places the root at the origin column and lays each depth in a column", () => {
-    const result = buildGraph(issue("a", [link("b"), link("c")]), {}, new Set());
-    const positioned = layoutGraph(result.nodes);
+  it("places upstream prerequisites left, the root centered, downstream dependents right", () => {
+    // a depends on b,c (upstream -> left); d depends on a (downstream -> right).
+    const result = buildGraph(issue("a", [link("b"), link("c")], [link("d")]), {}, new Set());
+    const positioned = layoutGraph(result.nodes, result.edges);
     const root = positioned.find((n) => n.id === "a")!;
     expect(root.x).toBe(0);
-    expect(root.y).toBe(0);
+    expect(root.side).toBe("center");
     const b = positioned.find((n) => n.id === "b")!;
     const c = positioned.find((n) => n.id === "c")!;
+    const d = positioned.find((n) => n.id === "d")!;
+    expect(b.side).toBe("left");
     expect(b.x).toBe(c.x);
-    expect(b.x).toBeGreaterThan(root.x);
+    expect(b.x).toBeLessThan(root.x);
+    // Siblings in a column are stacked apart vertically.
     expect(b.y).not.toBe(c.y);
+    expect(d.side).toBe("right");
+    expect(d.x).toBeGreaterThan(root.x);
   });
 
-  it("returns a finite viewBox that contains every node", () => {
+  it("routes expanded downstream neighbors into further right columns by depth", () => {
+    // a depends on d; d depends on e. Expanding d puts e one more hop right.
+    const a = issue("a", [], [link("d")]);
+    const d = issue("d", [], [link("e")]);
+    const e = issue("e", [], [link("a")]);
+    const result = buildGraph(a, { d, e }, new Set(["d"]));
+    const positioned = layoutGraph(result.nodes, result.edges);
+    const pa = positioned.find((n) => n.id === "a")!;
+    const pd = positioned.find((n) => n.id === "d")!;
+    const pe = positioned.find((n) => n.id === "e")!;
+    expect(pa.x).toBe(0);
+    expect(pd.x).toBeGreaterThan(pa.x);
+    expect(pe.x).toBeGreaterThan(pd.x);
+  });
+
+  it("returns a finite viewBox that contains every node on both sides", () => {
     const result = buildGraph(issue("a", [link("b"), link("c")], [link("d")]), {}, new Set());
-    const positioned = layoutGraph(result.nodes);
+    const positioned = layoutGraph(result.nodes, result.edges);
     const view = graphViewBox(positioned);
     for (const node of positioned) {
       expect(node.x).toBeGreaterThanOrEqual(view.x);
       expect(node.y).toBeGreaterThanOrEqual(view.y);
       expect(node.x + 190).toBeLessThanOrEqual(view.x + view.width);
       expect(node.y + 56).toBeLessThanOrEqual(view.y + view.height);
+    }
+  });
+});
+
+describe("routeEdges", () => {
+  it("gives distinct neighbors separate, bounded ports and bends leftward edges outward", () => {
+    const graph = buildGraph(issue("a", Array.from({ length: 15 }, (_, index) => link(`n${index}`))), {}, new Set());
+    const nodes = layoutGraph(graph.nodes, graph.edges);
+    const root = nodes.find((node) => node.id === "a")!;
+    const routes = routeEdges(nodes, graph.edges);
+    const ports = [...routes.values()].map((route) => {
+      const coordinates = route.path.match(/^M (-?[\d.]+) (-?[\d.]+) C (-?[\d.]+)/)!;
+      const x = Number(coordinates[1]);
+      const y = Number(coordinates[2]);
+      expect(Number(coordinates[3])).toBeLessThan(x);
+      expect(y).toBeGreaterThan(root.y);
+      expect(y).toBeLessThan(root.y + 64);
+      return y;
+    });
+    expect(new Set(ports).size).toBe(15);
+    const bounds = graphViewBox(nodes, routes.values());
+    for (const route of routes.values()) {
+      expect(route.bounds.minX).toBeGreaterThanOrEqual(bounds.x);
+      expect(route.bounds.minY).toBeGreaterThanOrEqual(bounds.y);
+      expect(route.bounds.maxX).toBeLessThanOrEqual(bounds.x + bounds.width);
+      expect(route.bounds.maxY).toBeLessThanOrEqual(bounds.y + bounds.height);
+    }
+  });
+  it("gives each parallel edge its own staggered port (no shared vertical line)", () => {
+    // a depends on b via two different typed edges (parallel).
+    const a = issue("a", [link("b", "blocks"), link("b", "related")]);
+    const result = buildGraph(a, {}, new Set());
+    const positioned = layoutGraph(result.nodes, result.edges);
+    const routes = routeEdges(positioned, result.edges);
+    expect(routes.size).toBe(2);
+    const [first, second] = [...routes.values()];
+    // Distinct ports -> distinct paths that do not share an identical start line.
+    expect(first.path).not.toBe(second.path);
+    // Both exit the root's right edge (b is upstream-left, so edges go left;
+    // verify they are real, non-empty cubic curves).
+    expect(first.path).toMatch(/^M /);
+    expect(second.path).toMatch(/^M /);
+  });
+
+  it("routes reciprocal edges apart from each other", () => {
+    const a = issue("a", [link("b")], [link("b")]);
+    const result = buildGraph(a, {}, new Set());
+    const positioned = layoutGraph(result.nodes, result.edges);
+    const routes = routeEdges(positioned, result.edges);
+    expect(routes.size).toBe(2);
+    const [one, two] = [...routes.values()];
+    expect(one.path).not.toBe(two.path);
+  });
+
+  it("draws a self loop as a closed curve returning to the same node", () => {
+    const a = issue("a", [link("a")]);
+    const result = buildGraph(a, {}, new Set());
+    const positioned = layoutGraph(result.nodes, result.edges);
+    const routes = routeEdges(positioned, result.edges);
+    const route = routes.get(result.edges[0].id)!;
+    expect(route).toBeDefined();
+    // A self loop returns to its own node's right edge.
+    expect(route.path.startsWith(`M ${190 + 4}`)).toBe(true);
+    expect(route.path).toMatch(/C /);
+  });
+
+  it("produces a route for every edge", () => {
+    const result = buildGraph(
+      issue("a", [link("b"), link("c")], [link("d")]),
+      {},
+      new Set(),
+    );
+    const positioned = layoutGraph(result.nodes, result.edges);
+    const routes = routeEdges(positioned, result.edges);
+    expect(routes.size).toBe(result.edges.length);
+    for (const edge of result.edges) {
+      expect(routes.get(edge.id)?.path).toBeTruthy();
     }
   });
 });
