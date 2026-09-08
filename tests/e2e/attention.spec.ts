@@ -1,3 +1,4 @@
+import path from "node:path";
 import { expect, test } from "@playwright/test";
 import type { BeadsIssue, IssueListResponse } from "../../src/lib/types";
 
@@ -115,6 +116,9 @@ test.describe("needs attention panel", () => {
     const drawer = page.getByRole("dialog");
     await expect(drawer.getByRole("heading", { name: "Fix crash on startup" })).toBeVisible();
     await expect(drawer.getByText("The app", { exact: false })).toBeVisible();
+    const params = new URL(page.url()).searchParams;
+    expect(params.get("project")).toBe(path.resolve(__dirname, "../fixtures/projects/alpha"));
+    expect(params.get("issue")).toBe("alpha-1");
   });
 
   test("keeps the board usable and the panel bounded on mobile", async ({ page }) => {
