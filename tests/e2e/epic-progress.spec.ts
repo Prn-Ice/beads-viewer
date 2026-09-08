@@ -162,6 +162,9 @@ test.describe("epic progress", () => {
 
     await page.getByRole("button", { name: "All", exact: true }).click();
     await page.getByRole("searchbox", { name: "Search issues" }).fill("release");
+    await page.getByRole("button", { name: /^Filters/ }).click();
+    await page.getByRole("dialog", { name: "Filters" }).getByRole("checkbox", { name: "epic", exact: true }).check();
+    await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /epic-root.*Release epic/ }).click();
 
     const reopened = page.getByRole("dialog");
