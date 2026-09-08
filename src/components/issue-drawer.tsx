@@ -4,6 +4,7 @@ import { useEffect, useState, type RefObject } from "react";
 import { ArrowLeftIcon, CheckIcon, CopyIcon, LinkIcon, RotateCwIcon } from "lucide-react";
 import { LabelBadge, PriorityBadge, StatusBadge, TypeBadge } from "@/components/badges";
 import { Markdown } from "@/components/markdown";
+import { EpicProgress } from "@/components/epic-progress";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -237,6 +238,12 @@ export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelect
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="overview" className="flex flex-col gap-6 pt-4">
+                <EpicProgress
+                  projectId={projectId}
+                  issueId={issue.id}
+                  issueType={issue.issue_type}
+                  onSelectIssue={onSelectIssue}
+                />
                 <Section title="Description" body={issue.description} />
                 <Section title="Acceptance Criteria" body={issue.acceptance_criteria} />
                 <Section title="Notes" body={issue.notes} />
