@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDownIcon, RotateCwIcon, SearchIcon } from "lucide-react";
 import { Board } from "@/components/board";
+import { IssueFilters } from "@/components/issue-filters";
 import { readDeepLink, withDeepLink } from "@/lib/navigation";
 import { IssueDrawer } from "@/components/issue-drawer";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -28,23 +29,22 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import type { BeadsIssue, IssueListResponse, Project } from "@/lib/types";
+import {
+  applyFilters,
+  applyViewToParams,
+  facetChoices,
+  parseViewState,
+  type FilterState,
+  type Scope,
+  type ViewState,
+} from "@/lib/filters";
+import type { IssueListResponse, Project } from "@/lib/types";
 
 const POLL_MS = 3_000;
 
 interface LoadedBoard {
   projectId: string;
   data: IssueListResponse;
-}
-
-function matchesSearch(issue: BeadsIssue, query: string): boolean {
-  if (!query) return true;
-  const q = query.toLowerCase();
-  return (
-    issue.id.toLowerCase().includes(q) ||
-    issue.title.toLowerCase().includes(q) ||
-    (issue.labels ?? []).some((label) => label.toLowerCase().includes(q))
-  );
 }
 
 // Mobile-only replacement for the desktop SidebarTrigger + heading: one button
@@ -84,8 +84,6 @@ export function Dashboard() {
   const router = useRouter();
 
   const [projects, setProjects] = useState<Project[] | null>(null);
-  const [scope, setScope] = useState<"open" | "all">("open");
-  const [search, setSearch] = useState("");
   const [board, setBoard] = useState<LoadedBoard | null>(null);
   const [boardError, setBoardError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -100,8 +98,16 @@ export function Dashboard() {
   const [drawerTab, setDrawerTab] = useState("overview");
   const drawerReturnFocus = useRef<HTMLElement | null>(null);
 
+  // Search, scope, and the facet filters live in the URL (see lib/filters.ts),
+  // so the view state is derived from the query string on every render.
+  const view = parseViewState(searchParams);
+
+  // One history entry per search edit, not per keystroke.
+  const searchSessionRef = useRef(false);
+
   useEffect(() => {
     function resetDrawerSession() {
+      searchSessionRef.current = false;
       setTrail([]);
       setTrailProject(null);
       setDrawerTab("overview");
@@ -143,7 +149,7 @@ export function Dashboard() {
   useEffect(() => {
     if (!selectedId) return;
     let cancelled = false;
-    fetch(`/api/projects/${encodeURIComponent(selectedId)}/issues?scope=${scope}`)
+    fetch(`/api/projects/${encodeURIComponent(selectedId)}/issues?scope=${view.scope}`)
       .then((res) => {
         if (!res.ok) throw new Error(`failed to load issues (HTTP ${res.status})`);
         return res.json();
@@ -163,7 +169,7 @@ export function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, [selectedId, scope, reloadKey]);
+  }, [selectedId, view.scope, reloadKey]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | undefined;
@@ -192,12 +198,45 @@ export function Dashboard() {
     setReloadKey((k) => k + 1);
   }
 
+  // Reads the live query string instead of the hook's searchParams so rapid
+  // changes (typing, filter toggles) never build a URL from a stale snapshot.
+  function liveParams(): URLSearchParams {
+    return new URLSearchParams(window.location.search);
+  }
+
+  function urlWithView(nextView: ViewState): string {
+    const next = applyViewToParams(liveParams(), nextView);
+    const query = next.toString();
+    return `${pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+  }
+
+  function selectScope(scope: Scope) {
+    if (scope === view.scope) return;
+    window.history.pushState(null, "", urlWithView({ ...parseViewState(liveParams()), scope }));
+  }
+
+  function toggleFilter(partial: Partial<FilterState>) {
+    const current = parseViewState(liveParams());
+    window.history.pushState(null, "", urlWithView({ ...current, filters: { ...current.filters, ...partial } }));
+  }
+
+  function onSearchChange(value: string) {
+    const url = urlWithView({ ...parseViewState(liveParams()), search: value });
+    // Native history updates are synchronous and integrate with useSearchParams.
+    if (searchSessionRef.current) {
+      window.history.replaceState(null, "", url);
+    } else {
+      searchSessionRef.current = true;
+      window.history.pushState(null, "", url);
+    }
+  }
+
   function selectProject(path: string) {
     setTrail([]);
     setTrailProject(null);
     setDrawerTab("overview");
-    const next = withDeepLink(pathname, searchParams, { project: path, issue: null });
-    const current = `${pathname}${searchParams.size ? `?${searchParams.toString()}` : ""}`;
+    const next = withDeepLink(pathname, liveParams(), { project: path, issue: null });
+    const current = `${pathname}${liveParams().size ? `?${liveParams().toString()}` : ""}`;
     if (next !== current) router.push(`${next}${window.location.hash}`, { scroll: false });
   }
 
@@ -207,7 +246,7 @@ export function Dashboard() {
     setDrawerTab("overview");
     setTrailProject(selectedId);
     setTrail([]);
-    router.push(`${withDeepLink(pathname, searchParams, { project: selectedId, issue: id })}${window.location.hash}`, { scroll: false });
+    router.push(`${withDeepLink(pathname, liveParams(), { project: selectedId, issue: id })}${window.location.hash}`, { scroll: false });
   }
 
   // Relationship links (dependencies, parents, children) extend the trail so the
@@ -219,27 +258,31 @@ export function Dashboard() {
     setTrail((current) =>
       trailActive && drawerIssueId ? [...current, drawerIssueId] : drawerIssueId ? [drawerIssueId] : [],
     );
-    router.replace(`${withDeepLink(pathname, searchParams, { project: selectedId, issue: id })}${window.location.hash}`, { scroll: false });
+    router.replace(`${withDeepLink(pathname, liveParams(), { project: selectedId, issue: id })}${window.location.hash}`, { scroll: false });
   }
 
   function goBackInTrail() {
     if (!trailActive || trail.length === 0) return;
     const previous = trail[trail.length - 1];
     setTrail(trail.slice(0, -1));
-    router.replace(`${withDeepLink(pathname, searchParams, { project: selectedId, issue: previous })}${window.location.hash}`, { scroll: false });
+    router.replace(`${withDeepLink(pathname, liveParams(), { project: selectedId, issue: previous })}${window.location.hash}`, { scroll: false });
   }
 
   function closeIssue() {
     setTrailProject(selectedId);
     setTrail([]);
-    router.push(`${withDeepLink(pathname, searchParams, { project: selectedId, issue: null })}${window.location.hash}`, { scroll: false });
+    router.push(`${withDeepLink(pathname, liveParams(), { project: selectedId, issue: null })}${window.location.hash}`, { scroll: false });
   }
 
   const selectedProject = projects?.find((project) => project.path === selectedId) ?? null;
   const boardMatches = board !== null && board.projectId === selectedId;
-  const visibleIssues = boardMatches
-    ? board.data.issues.filter((issue) => matchesSearch(issue, search))
-    : [];
+  const visibleIssues = boardMatches ? applyFilters(board.data.issues, view) : [];
+  // Facet choices come from the unfiltered scope issues plus any selected
+  // tokens, so options never vanish just because the current result set
+  // excludes them.
+  const choices = boardMatches
+    ? facetChoices(board.data.issues, view.filters)
+    : { types: [], labels: [], assignees: [] };
 
   return (
     <SidebarProvider className="flex h-dvh min-h-0 w-full">
@@ -307,8 +350,11 @@ export function Dashboard() {
               <SearchIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                value={view.search}
+                onChange={(event) => onSearchChange(event.target.value)}
+                onBlur={() => {
+                  searchSessionRef.current = false;
+                }}
                 placeholder="Search issues..."
                 aria-label="Search issues"
                 className="pl-8"
@@ -316,22 +362,23 @@ export function Dashboard() {
             </div>
             <div className="hidden items-center gap-1 rounded-lg border p-0.5 lg:flex">
               <Button
-                variant={scope === "open" ? "secondary" : "ghost"}
+                variant={view.scope === "open" ? "secondary" : "ghost"}
                 size="sm"
-                aria-pressed={scope === "open"}
-                onClick={() => setScope("open")}
+                aria-pressed={view.scope === "open"}
+                onClick={() => selectScope("open")}
               >
                 Open
               </Button>
               <Button
-                variant={scope === "all" ? "secondary" : "ghost"}
+                variant={view.scope === "all" ? "secondary" : "ghost"}
                 size="sm"
-                aria-pressed={scope === "all"}
-                onClick={() => setScope("all")}
+                aria-pressed={view.scope === "all"}
+                onClick={() => selectScope("all")}
               >
                 All
               </Button>
             </div>
+            <IssueFilters filters={view.filters} choices={choices} onChange={toggleFilter} />
             <Button variant="outline" size="icon" onClick={refresh} aria-label="Refresh">
               <RotateCwIcon className="size-4" />
             </Button>
@@ -342,8 +389,11 @@ export function Dashboard() {
               <SearchIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                value={view.search}
+                onChange={(event) => onSearchChange(event.target.value)}
+                onBlur={() => {
+                  searchSessionRef.current = false;
+                }}
                 placeholder="Search issues..."
                 aria-label="Search issues"
                 className="pl-8"
@@ -351,18 +401,18 @@ export function Dashboard() {
             </div>
             <div className="flex shrink-0 items-center gap-1 rounded-lg border p-0.5">
               <Button
-                variant={scope === "open" ? "secondary" : "ghost"}
+                variant={view.scope === "open" ? "secondary" : "ghost"}
                 size="sm"
-                aria-pressed={scope === "open"}
-                onClick={() => setScope("open")}
+                aria-pressed={view.scope === "open"}
+                onClick={() => selectScope("open")}
               >
                 Open
               </Button>
               <Button
-                variant={scope === "all" ? "secondary" : "ghost"}
+                variant={view.scope === "all" ? "secondary" : "ghost"}
                 size="sm"
-                aria-pressed={scope === "all"}
-                onClick={() => setScope("all")}
+                aria-pressed={view.scope === "all"}
+                onClick={() => selectScope("all")}
               >
                 All
               </Button>
@@ -383,7 +433,7 @@ export function Dashboard() {
           <Board
             issues={visibleIssues}
             readyIds={board.data.readyIds}
-            includeClosed={scope === "all"}
+            includeClosed={view.scope === "all"}
             onSelect={openIssue}
           />
         )}
