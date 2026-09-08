@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RotateCwIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, RotateCwIcon } from "lucide-react";
 import { LabelBadge, PriorityBadge, StatusBadge, TypeBadge } from "@/components/badges";
 import { Markdown } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { issueToMarkdown } from "@/lib/copy-md";
 import { formatDate, relativeTime } from "@/lib/format";
 import type { BeadsIssue, Comment, DependencyRef } from "@/lib/types";
 
 interface IssueDrawerProps {
   projectId: string;
+  projectPath: string;
   issueId: string | null;
   onClose: () => void;
   onSelectIssue: (id: string) => void;
@@ -71,12 +73,13 @@ function Section({ title, body }: { title: string; body?: string }) {
   );
 }
 
-export function IssueDrawer({ projectId, issueId, onClose, onSelectIssue }: IssueDrawerProps) {
+export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelectIssue }: IssueDrawerProps) {
   const [issue, setIssue] = useState<BeadsIssue | null>(null);
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [tab, setTab] = useState("overview");
+  const [copyState, setCopyState] = useState<"idle" | "success" | "error">("idle");
 
   useEffect(() => {
     if (!issueId) return;
@@ -117,6 +120,17 @@ export function IssueDrawer({ projectId, issueId, onClose, onSelectIssue }: Issu
   const dependencies = issue?.dependencies ?? [];
   const dependents = issue?.dependents ?? [];
 
+  async function handleCopy() {
+    if (!issue) return;
+    setCopyState("idle");
+    try {
+      await navigator.clipboard.writeText(issueToMarkdown(issue, projectPath));
+      setCopyState("success");
+    } catch {
+      setCopyState("error");
+    }
+  }
+
   return (
     <Sheet open={issueId !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="right" className="flex flex-col gap-0 overflow-y-auto p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl">
@@ -147,6 +161,17 @@ export function IssueDrawer({ projectId, issueId, onClose, onSelectIssue }: Issu
                 <PriorityBadge priority={issue.priority} />
               </div>
               <SheetTitle>{issue.title}</SheetTitle>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleCopy}>
+                  {copyState === "success" ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
+                  Copy as Markdown
+                </Button>
+                <span className="text-xs text-muted-foreground">Comments excluded</span>
+                <span role="status" aria-live="polite" className="text-xs text-muted-foreground">
+                  {copyState === "success" && "Copied to clipboard"}
+                  {copyState === "error" && "Copy failed. Check clipboard permissions and try again."}
+                </span>
+              </div>
               <SheetDescription>
                 <div className="flex flex-wrap gap-2 pt-1">
                   <TypeBadge issueType={issue.issue_type} />

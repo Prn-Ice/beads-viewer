@@ -32,6 +32,9 @@ view-beads --no-open  # only print the link
 The server keeps running in the background. Running `view-beads` again reuses
 it and just re-opens the browser.
 
+Use **Copy as Markdown** in an issue drawer to copy its loaded details for an
+agent handoff or PR discussion. Comments are excluded.
+
 ### Which projects are shown?
 
 Every beads project found on your machine, in this order:

@@ -258,6 +258,7 @@ export function Dashboard() {
         <IssueDrawer
           key={drawerIssueId ?? "closed"}
           projectId={selectedId ?? ""}
+          projectPath={selectedProject?.path ?? ""}
           issueId={drawerIssueId}
           onClose={() => setDrawerIssueId(null)}
           onSelectIssue={setDrawerIssueId}

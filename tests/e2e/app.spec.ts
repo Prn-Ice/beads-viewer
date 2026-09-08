@@ -46,6 +46,46 @@ test.describe("board journey", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
   });
 
+  test.describe("copy as markdown", () => {
+    test("copies the issue snapshot as markdown", async ({ page, context }) => {
+      await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+        origin: "http://127.0.0.1:8455",
+      });
+      await page.goto("/");
+      await page.getByRole("button", { name: /alpha-1.*Fix crash on startup/ }).click();
+      const drawer = page.getByRole("dialog");
+      await drawer.getByRole("button", { name: "Copy as Markdown" }).click();
+      await expect(drawer.getByText("Copied to clipboard")).toBeVisible();
+
+      const text = await page.evaluate(() => navigator.clipboard.readText());
+      expect(text).toContain("# alpha-1 · Fix crash on startup");
+      expect(text).toContain("**Project**:");
+      expect(text).toContain("**Status**: in_progress");
+      expect(text).toContain("## Description");
+      expect(text).toContain("## Acceptance Criteria");
+      expect(text).toContain("## Dependencies");
+      expect(text).toContain("> Comments are not included in this copy.");
+      expect(text).not.toContain("Reproduced");
+      await page.evaluate(() => navigator.clipboard.writeText("Something else"));
+      await drawer.getByRole("button", { name: "Copy as Markdown" }).click();
+      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(text);
+    });
+
+    test("reports clipboard failure accessibly", async ({ page }) => {
+      await page.addInitScript(() => {
+        Object.defineProperty(navigator, "clipboard", {
+          value: { writeText: () => Promise.reject(new Error("denied")) },
+          configurable: true,
+        });
+      });
+      await page.goto("/");
+      await page.getByRole("button", { name: /alpha-1.*Fix crash on startup/ }).click();
+      const drawer = page.getByRole("dialog");
+      await drawer.getByRole("button", { name: "Copy as Markdown" }).click();
+      await expect(drawer.getByText(/Copy failed/)).toBeVisible();
+    });
+  });
+
   test("switches between light and dark mode", async ({ page }) => {
     await page.goto("/");
     const html = page.locator("html");
