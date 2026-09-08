@@ -4,7 +4,7 @@ import { runBd } from "@/lib/bd";
 import { cached } from "@/lib/cache";
 import type { BeadsIssue, IssueListResponse } from "@/lib/types";
 
-const TTL_MS = 5_000;
+const TTL_MS = 1_000;
 
 function lightIssue(issue: BeadsIssue) {
   return {

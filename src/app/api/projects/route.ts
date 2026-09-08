@@ -3,7 +3,7 @@ import { cached } from "@/lib/cache";
 import { discoverProjects } from "@/lib/discovery";
 import type { Project, ProjectSummary } from "@/lib/types";
 
-const TTL_MS = 5_000;
+const TTL_MS = 1_000;
 
 export async function GET() {
   const projects = discoverProjects(process.cwd());

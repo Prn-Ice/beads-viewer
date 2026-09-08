@@ -58,6 +58,10 @@ npm run test:e2e     # Playwright integration tests (needs `npm run build` first
 - `src/app/page.tsx` + `src/components/*` — client UI (sidebar, board, drawer)
 - `bin/view-beads.mjs` — CLI: start/reuse server, print link, open browser
 
+The dashboard polls projects and the selected board every 3 seconds while visible,
+pauses polling in hidden tabs, and refreshes on return. These endpoints use a
+1-second data cache. Open issue drawers do not poll.
+
 `bd` binary location is resolved via `BEADS_BIN` env (default: `bd` from
 PATH). Project discovery roots come from `BEADS_PROJECT_ROOTS` (comma
 separated, default: cwd, `~/Projects`, `~/Dotfiles`).

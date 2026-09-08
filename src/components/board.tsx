@@ -27,7 +27,7 @@ export function Board({ issues, readyIds, includeClosed, onSelect }: BoardProps)
         {visible.map(({ key, label }) => (
           <section key={key} className="flex w-72 flex-col gap-2">
             <header className="flex items-center gap-2 px-1">
-              <h2 className="text-lg font-semibold tracking-tight">{label}</h2>
+              <h2 className="text-base font-semibold tracking-tight">{label}</h2>
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                 {columns[key].length}
               </span>

@@ -19,7 +19,7 @@ The live site's CSS explicitly selects Paper Mono for both body and headings
 also preloaded by Mintlify but is not the configured body/heading font.
 
 Typography keeps the site's 16px body baseline with a smaller dashboard heading
-scale: 24px project titles, 18px column headings, and 20px drawer titles.
+scale: 20px project titles, 16px column headings, and 18px drawer titles.
 Headings use weight 600 and -0.025em letter spacing; compact dashboard controls
 and issue metadata retain their smaller sizes.
 The site's `cv02`, `cv03`, `cv04`, and `cv11` font-feature settings are enabled

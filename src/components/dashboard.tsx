@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/sidebar";
 import type { BeadsIssue, IssueListResponse, Project } from "@/lib/types";
 
-const POLL_MS = 10_000;
+const POLL_MS = 3_000;
 
 interface LoadedBoard {
   projectId: string;
@@ -104,8 +104,25 @@ export function Dashboard() {
   }, [selectedId, scope, reloadKey]);
 
   useEffect(() => {
-    const timer = setInterval(() => setReloadKey((k) => k + 1), POLL_MS);
-    return () => clearInterval(timer);
+    let timer: ReturnType<typeof setInterval> | undefined;
+    function updatePolling() {
+      clearInterval(timer);
+      if (document.visibilityState === "visible") {
+        timer = setInterval(() => setReloadKey((k) => k + 1), POLL_MS);
+      }
+    }
+    function onVisibilityChange() {
+      updatePolling();
+      if (document.visibilityState === "visible") {
+        setReloadKey((k) => k + 1);
+      }
+    }
+    updatePolling();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   async function refresh() {
@@ -177,7 +194,7 @@ export function Dashboard() {
         <header className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-3 lg:gap-3">
           <SidebarTrigger />
           <Image src="/brand/beads.svg" alt="Beads" width={24} height={24} unoptimized className="md:hidden" />
-          <h1 className="min-w-0 flex-1 basis-[calc(100%-5rem)] truncate text-2xl font-semibold tracking-tight lg:basis-0">
+          <h1 className="min-w-0 flex-1 basis-[calc(100%-5rem)] truncate text-xl font-semibold tracking-tight lg:basis-0">
             {selectedProject?.name ?? "View Beads"}
           </h1>
           <div className="relative order-last w-full lg:order-none lg:ml-auto lg:w-64">
