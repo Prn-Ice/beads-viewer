@@ -90,3 +90,20 @@ test("limits distinct issue requests even for a wide root", async ({ page }) => 
   await expect(page.getByText(/Issue load limit reached/)).toBeVisible();
   await expect.poll(() => calls).toBe(30); // Root plus 29 expanded issues.
 });
+
+test("board polling leaves expanded chains loaded", async ({ page }) => {
+  let version = 0;
+  await page.route("**/issues?scope=open", (route) => route.fulfill({ json: {
+    issues: [{ ...data["alpha-1"], title: `Fix crash version ${++version}` }], readyIds: ["alpha-1"],
+  } }));
+  const requests = await setup(page);
+  await page.locator("summary", { hasText: "Explore blocker chains" }).click();
+  const up = page.getByRole("region", { name: "Blocked by", exact: true });
+  await up.getByRole("button", { name: "Expand b Blocked by", exact: true }).click();
+  await expect(up.getByRole("button", { name: "Expand c Blocked by", exact: true })).toBeVisible();
+  const next = version + 1;
+  const board = page.getByRole("region", { name: "Issue board", includeHidden: true });
+  await expect(board.getByRole("button", { name: new RegExp(`Fix crash version ${next}`), includeHidden: true })).toBeVisible({ timeout: 10_000 });
+  await expect(up.getByRole("button", { name: "Collapse b Blocked by", exact: true })).toBeVisible();
+  expect(requests).toEqual(["alpha-1", "b"]);
+});
