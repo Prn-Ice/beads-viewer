@@ -47,9 +47,9 @@ test.describe("board journey", () => {
   });
 
   test.describe("copy as markdown", () => {
-    test("copies the issue snapshot as markdown", async ({ page, context }) => {
+    test("copies the issue snapshot as markdown", async ({ page, context, baseURL }) => {
       await context.grantPermissions(["clipboard-read", "clipboard-write"], {
-        origin: "http://127.0.0.1:8455",
+        origin: baseURL,
       });
       await page.goto("/");
       await page.getByRole("button", { name: /alpha-1.*Fix crash on startup/ }).click();

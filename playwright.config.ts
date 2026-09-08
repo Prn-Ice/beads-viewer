@@ -2,29 +2,34 @@ import path from "node:path";
 import { defineConfig } from "@playwright/test";
 
 const fixtureDir = path.join(__dirname, "tests", "fixtures");
-const serverEnv = [
-  `BEADS_BIN=${path.join(fixtureDir, "fake-bd.mjs")}`,
-  `BEADS_HOME=${fixtureDir}`,
-  `BEADS_PROJECT_ROOTS=${path.join(fixtureDir, "projects")}`,
-  "PORT=8455",
-  "HOSTNAME=127.0.0.1",
-].join(" ");
+const port = Number(process.env.E2E_PORT ?? 8455);
+if (!Number.isInteger(port) || port < 1024 || port > 65526) {
+  throw new Error("E2E_PORT must be an integer from 1024 to 65526 (reserves ten ports)");
+}
+const baseURL = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "tests/e2e",
   timeout: 30_000,
   use: {
-    baseURL: "http://127.0.0.1:8455",
+    baseURL,
   },
   webServer: {
     command: [
       "npm run build",
       "cp -r .next/static .next/standalone/.next/static",
       "cp -r public .next/standalone/public",
-      `${serverEnv} node .next/standalone/server.js`,
+      "node .next/standalone/server.js",
     ].join(" && "),
-    url: "http://127.0.0.1:8455/api/health",
-    reuseExistingServer: !process.env.CI,
+    env: {
+      BEADS_BIN: path.join(fixtureDir, "fake-bd.mjs"),
+      BEADS_HOME: fixtureDir,
+      BEADS_PROJECT_ROOTS: path.join(fixtureDir, "projects"),
+      PORT: String(port),
+      HOSTNAME: "127.0.0.1",
+    },
+    url: `${baseURL}/api/health`,
+    reuseExistingServer: false,
     timeout: 240_000,
   },
 });

@@ -49,6 +49,29 @@ npm run test:e2e     # Playwright integration tests (needs `npm run build` first
   README and docs are part of the deliverable, and should be accompanied by
   screenshots of the UI.
 
+## Fast Task Handoff
+
+For implementation work, the primary agent delegates ready beads tasks to
+`implementer`. Use at most two workers, each in a separate Git worktree, and only
+parallelize independent changes. Each handoff includes task ID, absolute worktree
+path, branch/base commit, E2E_PORT, scope, acceptance criteria, and known failures.
+Mark tasks in progress in the main tracker before handing them off. Never run
+concurrent implementation agents against the same working tree or test ports.
+
+The implementer writes code and runs focused checks; it does not commit or close
+tasks. The primary agent takes a quick pass over the diff and test results, fixes
+any gaps itself, and verifies affected behavior. Do not bounce fixes through
+repeated handoffs or silently accept failing checks.
+
+Integrate serially: review/fix/test in the worker's worktree, commit only intended
+files there, then cherry-pick that commit into main and verify the combined result
+before closing the task. The primary agent owns all tracker mutations and Git
+integration. This workflow authorizes per-task and workflow-setup commits, not
+automatic pushes. If blocked, leave the task open and report the blocker. The
+implementer follows its own instructions, not this delegation loop.
+
+See [worker setup](docs/workers.md) for worktree preparation and test ports.
+
 ## Architecture
 
 - `src/lib/bd.ts` — spawns `bd --json`, parses output (all data access)

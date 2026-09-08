@@ -15,12 +15,12 @@ async function expectHeaderAlignment(header: Locator) {
 }
 
 for (const mode of ["light", "dark"] as const) {
-  test(`official branding loads locally in ${mode} mode`, async ({ page }) => {
+  test(`official branding loads locally in ${mode} mode`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.emulateMedia({ colorScheme: mode });
     const externalRequests: string[] = [];
     page.on("request", (request) => {
-      if (!request.url().startsWith("http://127.0.0.1:8455/")) {
+      if (!request.url().startsWith(`${baseURL}/`)) {
         externalRequests.push(request.url());
       }
     });
