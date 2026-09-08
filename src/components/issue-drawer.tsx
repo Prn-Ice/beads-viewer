@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckIcon, CopyIcon, RotateCwIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, LinkIcon, RotateCwIcon } from "lucide-react";
 import { LabelBadge, PriorityBadge, StatusBadge, TypeBadge } from "@/components/badges";
 import { Markdown } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { issueToMarkdown } from "@/lib/copy-md";
 import { formatDate, relativeTime } from "@/lib/format";
+import { buildIssueUrl } from "@/lib/navigation";
 import type { BeadsIssue, Comment, DependencyRef } from "@/lib/types";
 
 interface IssueDrawerProps {
@@ -80,6 +81,7 @@ export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelect
   const [reloadKey, setReloadKey] = useState(0);
   const [tab, setTab] = useState("overview");
   const [copyState, setCopyState] = useState<"idle" | "success" | "error">("idle");
+  const [linkCopyState, setLinkCopyState] = useState<"idle" | "success" | "error">("idle");
 
   useEffect(() => {
     if (!issueId) return;
@@ -123,11 +125,32 @@ export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelect
   async function handleCopy() {
     if (!issue) return;
     setCopyState("idle");
+    setLinkCopyState("idle");
     try {
       await navigator.clipboard.writeText(issueToMarkdown(issue, projectPath));
       setCopyState("success");
     } catch {
       setCopyState("error");
+    }
+  }
+
+  async function handleCopyLink() {
+    if (!issue) return;
+    const url = buildIssueUrl(
+      window.location.origin,
+      window.location.pathname,
+      window.location.search,
+      window.location.hash,
+      projectPath,
+      issue.id,
+    );
+    setLinkCopyState("idle");
+    setCopyState("idle");
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopyState("success");
+    } catch {
+      setLinkCopyState("error");
     }
   }
 
@@ -166,10 +189,16 @@ export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelect
                   {copyState === "success" ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
                   Copy as Markdown
                 </Button>
+                <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                  {linkCopyState === "success" ? <CheckIcon className="size-3.5" /> : <LinkIcon className="size-3.5" />}
+                  Copy link
+                </Button>
                 <span className="text-xs text-muted-foreground">Comments excluded</span>
                 <span role="status" aria-live="polite" className="text-xs text-muted-foreground">
                   {copyState === "success" && "Copied to clipboard"}
                   {copyState === "error" && "Copy failed. Check clipboard permissions and try again."}
+                  {linkCopyState === "success" && "Link copied to clipboard"}
+                  {linkCopyState === "error" && "Copy failed. Check clipboard permissions and try again."}
                 </span>
               </div>
               <SheetDescription>

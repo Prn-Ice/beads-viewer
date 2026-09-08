@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { RotateCwIcon, SearchIcon } from "lucide-react";
 import { Board } from "@/components/board";
+import { readDeepLink, withDeepLink } from "@/lib/navigation";
 import { IssueDrawer } from "@/components/issue-drawer";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
@@ -45,14 +47,27 @@ function matchesSearch(issue: BeadsIssue, query: string): boolean {
 }
 
 export function Dashboard() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [projects, setProjects] = useState<Project[] | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scope, setScope] = useState<"open" | "all">("open");
   const [search, setSearch] = useState("");
   const [board, setBoard] = useState<LoadedBoard | null>(null);
   const [boardError, setBoardError] = useState<string | null>(null);
-  const [drawerIssueId, setDrawerIssueId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+
+  const { project: urlProject, issue: urlIssue } = readDeepLink(searchParams);
+
+  // Derive selection from the URL deep-link params so Back/Forward and direct
+  // loads synchronize automatically. The default (or invalid) project is
+  // selected without writing to the URL so it does not flood history; an
+  // invalid project normalizes to the default without leaking the issue into it.
+  const validProject =
+    urlProject && projects?.some((project) => project.path === urlProject) ? urlProject : null;
+  const selectedId = validProject ?? projects?.[0]?.path ?? null;
+  const drawerIssueId = validProject ? urlIssue : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -62,13 +77,7 @@ export function Dashboard() {
         return res.json();
       })
       .then((data: Project[]) => {
-        if (!cancelled) {
-          setProjects(data);
-          setSelectedId((current) => {
-            if (current && data.some((project) => project.id === current)) return current;
-            return data[0]?.id ?? null;
-          });
-        }
+        if (!cancelled) setProjects(data);
       })
       .catch(() => {
         if (!cancelled) setProjects((current) => current ?? []);
@@ -81,7 +90,7 @@ export function Dashboard() {
   useEffect(() => {
     if (!selectedId) return;
     let cancelled = false;
-    fetch(`/api/projects/${selectedId}/issues?scope=${scope}`)
+    fetch(`/api/projects/${encodeURIComponent(selectedId)}/issues?scope=${scope}`)
       .then((res) => {
         if (!res.ok) throw new Error(`failed to load issues (HTTP ${res.status})`);
         return res.json();
@@ -130,7 +139,21 @@ export function Dashboard() {
     setReloadKey((k) => k + 1);
   }
 
-  const selectedProject = projects?.find((project) => project.id === selectedId) ?? null;
+  function selectProject(path: string) {
+    const next = withDeepLink(pathname, searchParams, { project: path, issue: null });
+    const current = `${pathname}${searchParams.size ? `?${searchParams.toString()}` : ""}`;
+    if (next !== current) router.push(`${next}${window.location.hash}`, { scroll: false });
+  }
+
+  function openIssue(id: string) {
+    router.push(`${withDeepLink(pathname, searchParams, { project: selectedId, issue: id })}${window.location.hash}`, { scroll: false });
+  }
+
+  function closeIssue() {
+    router.push(`${withDeepLink(pathname, searchParams, { project: selectedId, issue: null })}${window.location.hash}`, { scroll: false });
+  }
+
+  const selectedProject = projects?.find((project) => project.path === selectedId) ?? null;
   const boardMatches = board !== null && board.projectId === selectedId;
   const visibleIssues = boardMatches
     ? board.data.issues.filter((issue) => matchesSearch(issue, search))
@@ -164,9 +187,9 @@ export function Dashboard() {
                 {projects?.map((project) => (
                   <SidebarMenuItem key={project.id}>
                     <SidebarMenuButton
-                      isActive={project.id === selectedId}
+                      isActive={project.path === selectedId}
                       title={project.name}
-                      onClick={() => setSelectedId(project.id)}
+                      onClick={() => selectProject(project.path)}
                     >
                       <span className="min-w-0 flex-1 truncate">{project.name}</span>
                       <SidebarMenuBadge className="static shrink-0">
@@ -231,6 +254,11 @@ export function Dashboard() {
           </Button>
           <ThemeSwitcher />
         </header>
+        {projects !== null && urlProject && !validProject && (
+          <p role="status" className="border-b px-4 py-2 text-sm text-muted-foreground">
+            Linked project was not found. Select a project from the sidebar.
+          </p>
+        )}
         {boardError && (
           <div className="border-b bg-destructive/10 px-4 py-2 text-sm text-destructive">
             {boardError}
@@ -241,7 +269,7 @@ export function Dashboard() {
             issues={visibleIssues}
             readyIds={board.data.readyIds}
             includeClosed={scope === "all"}
-            onSelect={setDrawerIssueId}
+            onSelect={openIssue}
           />
         )}
         {selectedId && !boardMatches && !boardError && (
@@ -256,12 +284,12 @@ export function Dashboard() {
           </div>
         )}
         <IssueDrawer
-          key={drawerIssueId ?? "closed"}
-          projectId={selectedId ?? ""}
+          key={`${selectedId ?? ""}:${drawerIssueId ?? "closed"}`}
+          projectId={encodeURIComponent(selectedId ?? "")}
           projectPath={selectedProject?.path ?? ""}
           issueId={drawerIssueId}
-          onClose={() => setDrawerIssueId(null)}
-          onSelectIssue={setDrawerIssueId}
+          onClose={closeIssue}
+          onSelectIssue={openIssue}
         />
       </SidebarInset>
     </SidebarProvider>
