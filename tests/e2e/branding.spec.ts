@@ -4,8 +4,12 @@ async function expectHeaderAlignment(header: Locator) {
   await expect(header).toBeVisible();
   await expect(header.getByText("View Beads", { exact: true })).toHaveCount(0);
   await expect(header.getByText("Local issue dashboard", { exact: true })).toBeVisible();
-  const logo = await header.getByRole("img", { name: "Beads", exact: true }).boundingBox();
-  const subtitle = await header.getByText("Local issue dashboard", { exact: true }).boundingBox();
+  // Measure together so the mobile drawer animation cannot move between reads.
+  const { logo, subtitle } = await header.evaluate((element) => ({
+    logo: element.querySelector('img[alt="Beads"]')!.getBoundingClientRect().toJSON(),
+    subtitle: [...element.querySelectorAll("span")]
+      .find((span) => span.textContent === "Local issue dashboard")!.getBoundingClientRect().toJSON(),
+  }));
   expect(logo).not.toBeNull();
   expect(subtitle).not.toBeNull();
   expect(logo!.width).toBe(28);
