@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckIcon, CopyIcon, LinkIcon, RotateCwIcon } from "lucide-react";
+import { useEffect, useState, type RefObject } from "react";
+import { ArrowLeftIcon, CheckIcon, CopyIcon, LinkIcon, RotateCwIcon } from "lucide-react";
 import { LabelBadge, PriorityBadge, StatusBadge, TypeBadge } from "@/components/badges";
 import { Markdown } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,11 @@ interface IssueDrawerProps {
   issueId: string | null;
   onClose: () => void;
   onSelectIssue: (id: string) => void;
+  canGoBack: boolean;
+  onBack: () => void;
+  tab: string;
+  onTabChange: (tab: string) => void;
+  returnFocus: RefObject<HTMLElement | null>;
 }
 
 function MetaRow({ label, value }: { label: string; value: string }) {
@@ -74,12 +79,11 @@ function Section({ title, body }: { title: string; body?: string }) {
   );
 }
 
-export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelectIssue }: IssueDrawerProps) {
+export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelectIssue, canGoBack, onBack, tab, onTabChange, returnFocus }: IssueDrawerProps) {
   const [issue, setIssue] = useState<BeadsIssue | null>(null);
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [tab, setTab] = useState("overview");
   const [copyState, setCopyState] = useState<"idle" | "success" | "error">("idle");
   const [linkCopyState, setLinkCopyState] = useState<"idle" | "success" | "error">("idle");
 
@@ -156,7 +160,13 @@ export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelect
 
   return (
     <Sheet open={issueId !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="flex flex-col gap-0 overflow-y-auto p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl">
+      <SheetContent side="right" finalFocus={returnFocus} className="flex flex-col gap-0 overflow-y-auto p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl">
+        {canGoBack && (
+          <Button variant="ghost" size="sm" onClick={onBack} className="mt-4 ml-4 w-fit">
+            <ArrowLeftIcon className="size-4" />
+            Back
+          </Button>
+        )}
         {error && (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
             <p className="text-sm text-muted-foreground">{error}</p>
@@ -218,7 +228,7 @@ export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelect
                 </div>
               </SheetDescription>
             </SheetHeader>
-            <Tabs value={tab} onValueChange={setTab} className="flex flex-1 flex-col gap-0 p-6">
+            <Tabs value={tab} onValueChange={onTabChange} className="flex flex-1 flex-col gap-0 p-6">
               <TabsList className="max-w-full flex-wrap group-data-horizontal/tabs:h-auto [&_[data-slot=tabs-trigger]]:h-auto">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="comments">Comments ({comments?.length ?? 0})</TabsTrigger>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { RotateCwIcon, SearchIcon } from "lucide-react";
@@ -57,6 +57,26 @@ export function Dashboard() {
   const [board, setBoard] = useState<LoadedBoard | null>(null);
   const [boardError, setBoardError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  // Drawer Back trail: stack of issue ids reached by relationship navigation in
+  // the current project. Tracked per project so a stale trail can never bleed
+  // across projects (browser Back/Forward included); card/attention opens,
+  // closes, and direct loads all start without a trail.
+  const [trailProject, setTrailProject] = useState<string | null>(null);
+  const [trail, setTrail] = useState<string[]>([]);
+  // Kept here so in-drawer navigation (relationship links, Back) does not reset
+  // the active tab when the drawer content remounts per issue.
+  const [drawerTab, setDrawerTab] = useState("overview");
+  const drawerReturnFocus = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    function resetDrawerSession() {
+      setTrail([]);
+      setTrailProject(null);
+      setDrawerTab("overview");
+    }
+    window.addEventListener("popstate", resetDrawerSession);
+    return () => window.removeEventListener("popstate", resetDrawerSession);
+  }, []);
 
   const { project: urlProject, issue: urlIssue } = readDeepLink(searchParams);
 
@@ -68,6 +88,7 @@ export function Dashboard() {
     urlProject && projects?.some((project) => project.path === urlProject) ? urlProject : null;
   const selectedId = validProject ?? projects?.[0]?.path ?? null;
   const drawerIssueId = validProject ? urlIssue : null;
+  const trailActive = trailProject === selectedId;
 
   useEffect(() => {
     let cancelled = false;
@@ -140,16 +161,45 @@ export function Dashboard() {
   }
 
   function selectProject(path: string) {
+    setTrail([]);
+    setTrailProject(null);
+    setDrawerTab("overview");
     const next = withDeepLink(pathname, searchParams, { project: path, issue: null });
     const current = `${pathname}${searchParams.size ? `?${searchParams.toString()}` : ""}`;
     if (next !== current) router.push(`${next}${window.location.hash}`, { scroll: false });
   }
 
+  // Opening a card from the board or the attention list starts a fresh trail.
   function openIssue(id: string) {
+    drawerReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setDrawerTab("overview");
+    setTrailProject(selectedId);
+    setTrail([]);
     router.push(`${withDeepLink(pathname, searchParams, { project: selectedId, issue: id })}${window.location.hash}`, { scroll: false });
   }
 
+  // Relationship links (dependencies, parents, children) extend the trail so the
+  // drawer Back button can walk back. Use replace so the browser history keeps
+  // only project/card-level entries; the trail is app-managed, never stale.
+  function openIssueFromRelationship(id: string) {
+    if (id === drawerIssueId) return; // self-link: nothing to step back to
+    setTrailProject(selectedId);
+    setTrail((current) =>
+      trailActive && drawerIssueId ? [...current, drawerIssueId] : drawerIssueId ? [drawerIssueId] : [],
+    );
+    router.replace(`${withDeepLink(pathname, searchParams, { project: selectedId, issue: id })}${window.location.hash}`, { scroll: false });
+  }
+
+  function goBackInTrail() {
+    if (!trailActive || trail.length === 0) return;
+    const previous = trail[trail.length - 1];
+    setTrail(trail.slice(0, -1));
+    router.replace(`${withDeepLink(pathname, searchParams, { project: selectedId, issue: previous })}${window.location.hash}`, { scroll: false });
+  }
+
   function closeIssue() {
+    setTrailProject(selectedId);
+    setTrail([]);
     router.push(`${withDeepLink(pathname, searchParams, { project: selectedId, issue: null })}${window.location.hash}`, { scroll: false });
   }
 
@@ -289,7 +339,12 @@ export function Dashboard() {
           projectPath={selectedProject?.path ?? ""}
           issueId={drawerIssueId}
           onClose={closeIssue}
-          onSelectIssue={openIssue}
+          onSelectIssue={openIssueFromRelationship}
+          canGoBack={trailActive && trail.length > 0}
+          onBack={goBackInTrail}
+          tab={drawerTab}
+          onTabChange={setDrawerTab}
+          returnFocus={drawerReturnFocus}
         />
       </SidebarInset>
     </SidebarProvider>
