@@ -6,6 +6,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDownIcon, RotateCwIcon, SearchIcon } from "lucide-react";
 import { Board } from "@/components/board";
 import { IssueFilters } from "@/components/issue-filters";
+import { SessionChanges } from "@/components/session-changes";
+import { observeSession, resetSession, type ObservedSession } from "@/lib/session-changes";
 import { readDeepLink, withDeepLink } from "@/lib/navigation";
 import { IssueDrawer } from "@/components/issue-drawer";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -87,6 +89,7 @@ export function Dashboard() {
   const [board, setBoard] = useState<LoadedBoard | null>(null);
   const [boardError, setBoardError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [sessions, setSessions] = useState<Record<string, ObservedSession>>({});
   // Drawer Back trail: stack of issue ids reached by relationship navigation in
   // the current project. Tracked per project so a stale trail can never bleed
   // across projects (browser Back/Forward included); card/attention opens,
@@ -158,6 +161,8 @@ export function Dashboard() {
         if (!cancelled) {
           setBoard({ projectId: selectedId, data });
           setBoardError(null);
+          const now = Date.now();
+          setSessions((current) => ({ ...current, [selectedId]: observeSession(current[selectedId], data.issues, now) }));
         }
       })
       .catch((err: Error) => {
@@ -328,6 +333,15 @@ export function Dashboard() {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter className="border-t p-4">
+          <SessionChanges
+            session={selectedId ? sessions[selectedId] : undefined}
+            onSelect={openIssue}
+            onReset={() => {
+              if (!selectedId) return;
+              const now = Date.now();
+              setSessions((current) => current[selectedId] ? { ...current, [selectedId]: resetSession(current[selectedId], now) } : current);
+            }}
+          />
           <a
             href="https://beads.gascity.com/"
             target="_blank"

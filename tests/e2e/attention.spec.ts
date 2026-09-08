@@ -47,11 +47,11 @@ async function stubIssues(page: import("@playwright/test").Page, issues: BeadsIs
 async function expandAttention(page: import("@playwright/test").Page) {
   const summary = page.locator("summary", { hasText: "Needs attention" });
   await summary.click();
-  await expect(page.locator("details")).toHaveAttribute("open", "");
+  await expect(page.locator('details[aria-label="Needs attention"]')).toHaveAttribute("open", "");
 }
 
 function panelRow(page: import("@playwright/test").Page, name: string | RegExp) {
-  return page.locator("details").getByRole("button", { name });
+  return page.locator('details[aria-label="Needs attention"]').getByRole("button", { name });
 }
 
 test.describe("needs attention panel", () => {
@@ -110,7 +110,7 @@ test.describe("needs attention panel", () => {
     await expandAttention(page);
 
     await page
-      .locator("details")
+      .locator('details[aria-label="Needs attention"]')
       .getByRole("button", { name: /alpha-1.*Fix crash on startup/ })
       .click();
     const drawer = page.getByRole("dialog");
@@ -132,7 +132,7 @@ test.describe("needs attention panel", () => {
     await expandAttention(page);
 
     // The expanded panel scrolls internally instead of pushing the board away.
-    const panel = page.locator("details > div");
+    const panel = page.locator('details[aria-label="Needs attention"] > div');
     await expect(panel).toBeVisible();
     expect(await panel.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
@@ -149,7 +149,7 @@ test.describe("needs attention panel", () => {
       await page.screenshot({ path: "docs/screenshots/attention-mobile.png", animations: "disabled" });
     }
     await page
-      .locator("details")
+      .locator('details[aria-label="Needs attention"]')
       .getByRole("button", { name: /alpha-1.*Fix crash on startup/ })
       .click();
     await expect(page.getByRole("dialog")).toBeVisible();

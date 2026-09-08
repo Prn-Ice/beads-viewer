@@ -38,7 +38,7 @@ export function NeedsAttention({ issues, onSelect }: NeedsAttentionProps) {
   const items = computeNeedsAttention(issues, { urgentDays, stallDays });
 
   return (
-    <details className="shrink-0 border-b bg-card/40">
+    <details aria-label="Needs attention" className="shrink-0 border-b bg-card/40">
       <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-1.5 text-sm font-medium text-muted-foreground select-none hover:text-foreground [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring">
         <AlertTriangleIcon className="size-3.5 text-muted-foreground" aria-hidden="true" />
         <span>Needs attention</span>
