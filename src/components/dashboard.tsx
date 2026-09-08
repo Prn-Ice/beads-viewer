@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { RotateCwIcon, SearchIcon } from "lucide-react";
 import { Board } from "@/components/board";
 import { IssueDrawer } from "@/components/issue-drawer";
@@ -11,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -118,11 +120,11 @@ export function Dashboard() {
     : [];
 
   return (
-    <SidebarProvider className="flex min-h-screen w-full flex-1">
+    <SidebarProvider className="flex h-dvh min-h-0 w-full">
       <Sidebar>
-        <SidebarHeader className="flex-col items-start gap-1">
-          <span className="text-base font-semibold">View Beads</span>
-          <span className="text-xs text-muted-foreground">beads issue dashboard</span>
+        <SidebarHeader className="gap-2 border-b p-4">
+          <Image src="/brand/beads.svg" alt="Beads" width={28} height={28} unoptimized className="shrink-0 self-start" />
+          <span className="text-xs text-muted-foreground">Local issue dashboard</span>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
@@ -159,14 +161,25 @@ export function Dashboard() {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
+        <SidebarFooter className="border-t p-4">
+          <a
+            href="https://beads.gascity.com/"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded text-xs text-muted-foreground underline-offset-4 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+          >
+            Beads documentation<span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="flex flex-col gap-0">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
+      <SidebarInset className="flex min-h-0 min-w-0 flex-col gap-0">
+        <header className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-3 lg:gap-3">
           <SidebarTrigger />
-          <h1 className="truncate text-sm font-medium">
+          <Image src="/brand/beads.svg" alt="Beads" width={24} height={24} unoptimized className="md:hidden" />
+          <h1 className="min-w-0 flex-1 truncate text-sm font-medium">
             {selectedProject?.name ?? "View Beads"}
           </h1>
-          <div className="relative ml-auto w-64">
+          <div className="relative order-last w-full lg:order-none lg:ml-auto lg:w-64">
             <SearchIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
@@ -181,6 +194,7 @@ export function Dashboard() {
             <Button
               variant={scope === "open" ? "secondary" : "ghost"}
               size="sm"
+              aria-pressed={scope === "open"}
               onClick={() => setScope("open")}
             >
               Open
@@ -188,6 +202,7 @@ export function Dashboard() {
             <Button
               variant={scope === "all" ? "secondary" : "ghost"}
               size="sm"
+              aria-pressed={scope === "all"}
               onClick={() => setScope("all")}
             >
               All
@@ -212,7 +227,7 @@ export function Dashboard() {
           />
         )}
         {selectedId && !boardMatches && !boardError && (
-          <div className="flex flex-1 gap-4 p-4">
+          <div className="flex flex-1 gap-4 overflow-x-auto p-4">
             {[0, 1, 2, 3].map((i) => (
               <div key={i} className="flex w-72 flex-col gap-2">
                 <Skeleton className="h-5 w-20" />

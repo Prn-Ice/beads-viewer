@@ -22,7 +22,7 @@ export function Board({ issues, readyIds, includeClosed, onSelect }: BoardProps)
   }
 
   return (
-    <div className="flex-1 overflow-x-auto">
+    <div className="min-h-0 min-w-0 flex-1 overflow-x-auto">
       <div className="flex h-full min-w-max gap-4 p-4">
         {visible.map(({ key, label }) => (
           <section key={key} className="flex w-72 flex-col gap-2">

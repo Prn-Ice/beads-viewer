@@ -119,7 +119,7 @@ export function IssueDrawer({ projectId, issueId, onClose, onSelectIssue }: Issu
 
   return (
     <Sheet open={issueId !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-2xl">
+      <SheetContent side="right" className="flex flex-col gap-0 overflow-y-auto p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl">
         {error && (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
             <p className="text-sm text-muted-foreground">{error}</p>
@@ -165,7 +165,7 @@ export function IssueDrawer({ projectId, issueId, onClose, onSelectIssue }: Issu
               </SheetDescription>
             </SheetHeader>
             <Tabs value={tab} onValueChange={setTab} className="flex flex-1 flex-col gap-0 p-6">
-              <TabsList>
+              <TabsList className="max-w-full flex-wrap group-data-horizontal/tabs:h-auto [&_[data-slot=tabs-trigger]]:h-auto">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="comments">Comments ({comments?.length ?? 0})</TabsTrigger>
                 <TabsTrigger value="dependencies">

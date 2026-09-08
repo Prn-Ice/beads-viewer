@@ -47,7 +47,7 @@ export async function GET(
     if (scope === "all") args.push("--all");
     const [issuesRaw, readyRaw] = await Promise.all([
       runBd(args, path),
-      scope === "all" ? Promise.resolve([]) : runBd(["list", "--limit", "0", "--ready"], path),
+      runBd(["list", "--limit", "0", "--ready"], path),
     ]);
     return {
       issues: (issuesRaw as BeadsIssue[]).map(lightIssue),

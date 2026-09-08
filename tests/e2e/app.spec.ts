@@ -57,10 +57,59 @@ test.describe("board journey", () => {
     await page.keyboard.press("Escape");
   });
 
-  test("applies a color theme", async ({ page }) => {
+  for (const mode of ["Light", "Dark"] as const) {
+    test(`color themes visibly update controls in ${mode.toLowerCase()} mode`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: mode === "Light" ? "light" : "dark" });
+      await page.goto("/");
+      const project = page.getByRole("button", { name: /^alpha \d+$/ });
+      const scope = page.getByRole("button", { name: "Open", exact: true });
+      await expect(project).toHaveAttribute("data-active");
+      await page.getByRole("button", { name: "Change theme" }).click();
+      await page.getByRole("menuitemradio", { name: mode, exact: true }).click();
+      const neutralProject = await project.evaluate((el) => getComputedStyle(el).backgroundColor);
+      const neutralScope = await scope.evaluate((el) => getComputedStyle(el).backgroundColor);
+      const colors = new Set<string>([neutralProject]);
+
+      for (const color of ["Ocean", "Forest", "Rose"]) {
+        const option = page.getByRole("menuitemradio", { name: color, exact: true });
+        await option.click();
+        await expect(option).toBeChecked();
+        await expect(page.locator("html")).toHaveAttribute("data-theme", color.toLowerCase());
+        await expect(project).not.toHaveCSS("background-color", neutralProject);
+        await expect(scope).not.toHaveCSS("background-color", neutralScope);
+        colors.add(await project.evaluate((el) => getComputedStyle(el).backgroundColor));
+      }
+      expect(colors.size).toBe(4);
+      const roseProject = await project.evaluate((el) => getComputedStyle(el).backgroundColor);
+      await page.reload();
+      await expect(project).toHaveCSS("background-color", roseProject);
+      await page.getByRole("button", { name: "Change theme" }).click();
+      await expect(page.getByRole("menuitemradio", { name: "Rose", exact: true })).toBeChecked();
+      await expect(page.getByRole("menuitemradio", { name: mode, exact: true })).toBeChecked();
+      await page.getByRole("menuitemradio", { name: "Neutral", exact: true }).click();
+      await expect(page.locator("html")).not.toHaveAttribute("data-theme");
+      await expect(project).toHaveCSS("background-color", neutralProject);
+      await expect(scope).toHaveCSS("background-color", neutralScope);
+      await page.reload();
+      await expect(page.locator("html")).not.toHaveAttribute("data-theme");
+      await expect(project).toHaveCSS("background-color", neutralProject);
+    });
+  }
+
+  test("preserves the color theme when system mode changes", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/");
     await page.getByRole("button", { name: "Change theme" }).click();
+    await page.getByRole("menuitemradio", { name: "System", exact: true }).click();
     await page.getByRole("menuitemradio", { name: "Forest" }).click();
+    const project = page.getByRole("button", { name: /^alpha \d+$/ });
+    const lightColor = await project.evaluate((el) => getComputedStyle(el).backgroundColor);
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(page.locator("html")).toHaveClass(/dark/);
     await expect(page.locator("html")).toHaveAttribute("data-theme", "forest");
+    await expect(project).not.toHaveCSS("background-color", lightColor);
+    await page.emulateMedia({ colorScheme: "light" });
+    await expect(page.locator("html")).not.toHaveClass(/dark/);
+    await expect(project).toHaveCSS("background-color", lightColor);
   });
 });
