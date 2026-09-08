@@ -250,6 +250,24 @@ test.describe("drawer back trail", () => {
     await expect(page.getByRole("button", { name: /.*Issue A/ }).first()).toBeFocused();
   });
 
+  test("returns focus to the list row after relationship navigation", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "List", exact: true }).click();
+    const row = page.getByRole("region", { name: "Issue list" })
+      .getByRole("button", { name: "Issue A", exact: true });
+    await row.focus();
+    await row.press("Enter");
+    const drawer = page.getByRole("dialog");
+    await openDependenciesTab(drawer);
+    await relationshipButton(drawer, "rel-b").click();
+    await expect(drawer.getByRole("heading", { name: "Issue B" })).toBeVisible();
+    await backButton(drawer).click();
+    await expect(drawer.getByRole("heading", { name: "Issue A" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(row).toBeFocused();
+  });
+
   test("Back remains available when a linked issue fails to load", async ({ page }) => {
     await page.route("**/api/projects/*/issues/rel-b", (route) =>
       route.fulfill({ status: 404, json: { error: "not found" } }),
