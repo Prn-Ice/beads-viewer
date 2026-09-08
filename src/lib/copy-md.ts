@@ -7,7 +7,7 @@ function depId(dep: DependencyRef, index: number): string {
 function formatDependency(dep: DependencyRef, index: number): string {
   const id = depId(dep, index);
   const title = dep.title ? ` — ${dep.title}` : "";
-  const detail = [dep.status, dep.type].filter(Boolean).join(", ");
+  const detail = [dep.status, dep.dependency_type ?? dep.type].filter(Boolean).join(", ");
   const suffix = detail ? ` (${detail})` : "";
   return `- \`${id}\`${title}${suffix}`;
 }

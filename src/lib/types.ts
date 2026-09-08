@@ -2,6 +2,7 @@ export interface DependencyRef {
   issue_id?: string;
   depends_on_id?: string;
   type?: string;
+  dependency_type?: string;
   id?: string;
   title?: string;
   status?: string;

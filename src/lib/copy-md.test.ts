@@ -19,6 +19,10 @@ function issue(overrides: Partial<BeadsIssue> = {}): BeadsIssue {
 }
 
 describe("issueToMarkdown", () => {
+  it("copies hydrated bd show relationship types", () => {
+    const md = issueToMarkdown(issue({ dependencies: [{ id: "alpha-0", dependency_type: "blocks" }] }), "/proj");
+    expect(md).toContain("`alpha-0` (blocks)");
+  });
   it("includes unambiguous project and issue identity", () => {
     const md = issueToMarkdown(issue(), "/home/u/proj");
     expect(md).toContain("# alpha-1 · Fix crash on startup");

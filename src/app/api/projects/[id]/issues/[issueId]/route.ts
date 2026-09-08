@@ -12,7 +12,7 @@ function findProjectPath(id: string): string | null {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string; issueId: string }> },
 ) {
   const { id, issueId } = await params;
@@ -22,8 +22,11 @@ export async function GET(
   }
 
   try {
-    const issue = await cached<BeadsIssue>(`show|${path}|${issueId}`, TTL_MS, async () => {
-      const data = await runBd(["show", issueId], path);
+    const relationships = new URL(request.url).searchParams.get("relationships") === "all";
+    const issue = await cached<BeadsIssue>(`show|${path}|${issueId}|${relationships}`, TTL_MS, async () => {
+      const args = ["show", issueId];
+      if (relationships) args.push("--include-dependents");
+      const data = await runBd(args, path);
       const issues = data as BeadsIssue[];
       if (issues.length === 0) throw new Error("not found");
       return issues[0];

@@ -5,6 +5,8 @@ import { ArrowLeftIcon, CheckIcon, CopyIcon, LinkIcon, RotateCwIcon } from "luci
 import { LabelBadge, PriorityBadge, StatusBadge, TypeBadge } from "@/components/badges";
 import { Markdown } from "@/components/markdown";
 import { EpicProgress } from "@/components/epic-progress";
+import { BlockerChains } from "@/components/blocker-chains";
+import { issueLinks, type IssueLink } from "@/lib/blocker-chains";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { issueToMarkdown } from "@/lib/copy-md";
 import { formatDate, relativeTime } from "@/lib/format";
 import { buildIssueUrl } from "@/lib/navigation";
-import type { BeadsIssue, Comment, DependencyRef } from "@/lib/types";
+import type { BeadsIssue, Comment } from "@/lib/types";
 
 interface IssueDrawerProps {
   projectId: string;
@@ -42,7 +44,7 @@ function DependencyList({
   onSelectIssue,
 }: {
   title: string;
-  items: DependencyRef[];
+  items: IssueLink[];
   onSelectIssue: (id: string) => void;
 }) {
   if (items.length === 0) return null;
@@ -51,15 +53,16 @@ function DependencyList({
       <h4 className="mb-2 text-sm font-medium">{title}</h4>
       <div className="flex flex-col gap-1">
         {items.map((dep, index) => {
-          const id = dep.id ?? dep.issue_id ?? dep.depends_on_id ?? `dep-${index}`;
+          const id = dep.id;
           return (
             <button
-              key={id}
+              key={`${id ?? index}:${dep.type}`}
               type="button"
-              onClick={() => onSelectIssue(id)}
+              disabled={!id}
+              onClick={() => id && onSelectIssue(id)}
               className="flex items-center gap-2 rounded-md border p-2 text-left text-sm hover:bg-accent/40"
             >
-              <span className="font-mono text-xs text-muted-foreground">{id}</span>
+              <span className="max-w-[35%] shrink-0 truncate font-mono text-xs text-muted-foreground">{id ?? "Unresolved reference"}</span>
               <span className="flex-1 truncate">{dep.title ?? "—"}</span>
               {dep.status && <StatusBadge status={dep.status} />}
             </button>
@@ -124,8 +127,8 @@ export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelect
     };
   }, [projectId, issueId, reloadKey]);
 
-  const dependencies = issue?.dependencies ?? [];
-  const dependents = issue?.dependents ?? [];
+  const dependencies = issue ? issueLinks(issue, "dependencies") : [];
+  const dependents = issue ? issueLinks(issue, "dependents") : [];
 
   async function handleCopy() {
     if (!issue) return;
@@ -270,10 +273,11 @@ export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelect
                 ))}
               </TabsContent>
               <TabsContent value="dependencies" className="flex flex-col gap-6 pt-4">
+                <BlockerChains projectId={projectId} issueId={issue.id} onSelect={onSelectIssue} />
                 <DependencyList title="Depends on" items={dependencies} onSelectIssue={onSelectIssue} />
                 <DependencyList title="Required by" items={dependents} onSelectIssue={onSelectIssue} />
                 {dependencies.length === 0 && dependents.length === 0 && (
-                  <p className="text-sm text-muted-foreground">No dependencies.</p>
+                  <p className="text-sm text-muted-foreground">{issue.dependency_count > 0 || issue.dependent_count > 0 ? "Expand blocker chains to load relationship details." : "No dependencies."}</p>
                 )}
               </TabsContent>
             </Tabs>
