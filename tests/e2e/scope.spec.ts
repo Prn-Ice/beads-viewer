@@ -48,7 +48,7 @@ for (const width of [1280, 390]) {
     for (const control of controls) {
       await expect(control).toBeInViewport({ ratio: 1 });
     }
-    const board = page.locator("main > div").filter({ has: closed });
+    const board = page.getByRole("region", { name: "Issue board" });
     await board.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
     await expect(closed.getByRole("heading")).toBeInViewport({ ratio: 1 });
     const list = closed.locator(":scope > div");
