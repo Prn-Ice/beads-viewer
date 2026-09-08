@@ -11,6 +11,7 @@ export interface EpicChild {
   title: string;
   status: string;
   issue_type?: string;
+  priority?: number;
 }
 
 export function epicProgress(children: EpicChild[]): { total: number; closed: number } {

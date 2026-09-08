@@ -6,6 +6,7 @@ import { LabelBadge, PriorityBadge, StatusBadge, TypeBadge } from "@/components/
 import { Markdown } from "@/components/markdown";
 import { EpicProgress } from "@/components/epic-progress";
 import { BlockerChains } from "@/components/blocker-chains";
+import { DependencyGraph } from "@/components/dependency-graph";
 import { issueLinks, type IssueLink } from "@/lib/blocker-chains";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -273,6 +274,7 @@ export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelect
                 ))}
               </TabsContent>
               <TabsContent value="dependencies" className="flex flex-col gap-6 pt-4">
+                <DependencyGraph projectId={projectId} issue={issue} onSelect={onSelectIssue} />
                 <BlockerChains projectId={projectId} issueId={issue.id} onSelect={onSelectIssue} />
                 <DependencyList title="Depends on" items={dependencies} onSelectIssue={onSelectIssue} />
                 <DependencyList title="Required by" items={dependents} onSelectIssue={onSelectIssue} />

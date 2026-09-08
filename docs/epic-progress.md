@@ -38,7 +38,7 @@ the epic's direct children.
 
 `GET /api/projects/<id>/issues/<issueId>/children` runs
 `bd list --parent <issueId> --status all --limit 0` and returns a light
-child shape (`id`, `title`, `status`, `issue_type`). The endpoint validates the
+child shape (`id`, `title`, `status`, `issue_type`, `priority`). The endpoint validates the
 project like the other issue routes and caches results for 5 seconds.
 
 ## Screenshots

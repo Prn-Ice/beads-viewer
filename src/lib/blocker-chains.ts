@@ -9,6 +9,8 @@ export interface IssueLink {
   type: string;
   title?: string;
   status?: string;
+  priority?: number;
+  issue_type?: string;
 }
 
 export function issueLinks(issue: BeadsIssue, direction: ChainDirection): IssueLink[] {
@@ -23,7 +25,7 @@ export function issueLinks(issue: BeadsIssue, direction: ChainDirection): IssueL
     const key = JSON.stringify([id, type]);
     if (seen.has(key)) continue;
     seen.add(key);
-    links.push({ id: id || null, type, title: ref.title, status: ref.status });
+    links.push({ id: id || null, type, title: ref.title, status: ref.status, priority: ref.priority, issue_type: ref.issue_type });
   }
   return links;
 }

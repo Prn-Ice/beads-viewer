@@ -13,6 +13,7 @@ function lightChild(issue: BeadsIssue): EpicChild {
     title: issue.title,
     status: issue.status,
     issue_type: issue.issue_type,
+    priority: issue.priority,
   };
 }
 

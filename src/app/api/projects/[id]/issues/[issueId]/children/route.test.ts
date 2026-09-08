@@ -37,7 +37,7 @@ describe("children endpoint", () => {
 
   it("asks bd for ALL direct children including closed", async () => {
     mockedRunBd.mockResolvedValue([
-      { id: "epic-1", title: "A", status: "open" },
+      { id: "epic-1", title: "A", status: "open", priority: 0 },
       { id: "epic-2", title: "B", status: "closed", issue_type: "task" },
       { id: "epic-3", title: "C", status: "blocked" },
     ]);
@@ -45,7 +45,7 @@ describe("children endpoint", () => {
     const res = await GET(new Request("http://test"), params(projectDir, "epic-root"));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([
-      { id: "epic-1", title: "A", status: "open", issue_type: undefined },
+      { id: "epic-1", title: "A", status: "open", priority: 0, issue_type: undefined },
       { id: "epic-2", title: "B", status: "closed", issue_type: "task" },
       { id: "epic-3", title: "C", status: "blocked", issue_type: undefined },
     ]);
