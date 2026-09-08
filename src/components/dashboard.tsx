@@ -148,10 +148,11 @@ export function Dashboard() {
                   <SidebarMenuItem key={project.id}>
                     <SidebarMenuButton
                       isActive={project.id === selectedId}
+                      title={project.name}
                       onClick={() => setSelectedId(project.id)}
                     >
-                      <span className="flex-1 truncate">{project.name}</span>
-                      <SidebarMenuBadge>
+                      <span className="min-w-0 flex-1 truncate">{project.name}</span>
+                      <SidebarMenuBadge className="static shrink-0">
                         {project.summary?.open_issues ?? "?"}
                       </SidebarMenuBadge>
                     </SidebarMenuButton>

@@ -68,6 +68,41 @@ for (const mode of ["light", "dark"] as const) {
   });
 }
 
+for (const width of [390, 1280]) {
+  test(`long project names leave room for counts at ${width}px`, async ({ page }) => {
+    const name = "LenovoLegionLinuxFrontendWithALongerProjectName";
+    await page.setViewportSize({ width, height: 844 });
+    await page.route("**/api/projects", async (route) => {
+      const response = await route.fetch();
+      const projects = await response.json();
+      projects[0].name = name;
+      projects[0].summary.open_issues = 1000;
+      await route.fulfill({ response, json: projects });
+    });
+    await page.goto("/");
+    if (width < 768) {
+      await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+    }
+    const project = page.getByRole("button", { name: new RegExp(name) });
+    await expect(project).toBeVisible();
+    await expect(project).toHaveAttribute("title", name);
+    const label = project.locator("span");
+    const count = project.locator('[data-slot="sidebar-menu-badge"]');
+    await expect(count).toHaveText("1000");
+    await page.evaluate(() => document.fonts.ready);
+    await expect(label).toHaveCSS("text-overflow", "ellipsis");
+    expect(await label.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+    const labelBox = (await label.boundingBox())!;
+    const countBox = (await count.boundingBox())!;
+    const buttonBox = (await project.boundingBox())!;
+    expect(countBox.x - (labelBox.x + labelBox.width)).toBeGreaterThanOrEqual(8);
+    expect(countBox.x + countBox.width).toBeLessThanOrEqual(buttonBox.x + buttonBox.width);
+    if (process.env.UPDATE_SCREENSHOTS) {
+      await page.screenshot({ path: `docs/screenshots/beads-long-project-${width}.png`, animations: "disabled" });
+    }
+  });
+}
+
 for (const width of [360, 390, 768]) {
   test(`dashboard remains usable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
