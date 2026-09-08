@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDownIcon, RotateCwIcon, SearchIcon } from "lucide-react";
 import { Board } from "@/components/board";
 import { IssueFilters } from "@/components/issue-filters";
+import { NeedsYou } from "@/components/needs-you";
 import { SessionChanges } from "@/components/session-changes";
 import { observeSession, resetSession, type ObservedSession } from "@/lib/session-changes";
 import { readDeepLink, withDeepLink } from "@/lib/navigation";
@@ -246,12 +247,12 @@ export function Dashboard() {
   }
 
   // Opening a card from the board or the attention list starts a fresh trail.
-  function openIssue(id: string) {
+  function openIssue(id: string, projectPath = selectedId) {
     drawerReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setDrawerTab("overview");
-    setTrailProject(selectedId);
+    setTrailProject(projectPath);
     setTrail([]);
-    router.push(`${withDeepLink(pathname, liveParams(), { project: selectedId, issue: id })}${window.location.hash}`, { scroll: false });
+    router.push(`${withDeepLink(pathname, liveParams(), { project: projectPath, issue: id })}${window.location.hash}`, { scroll: false });
   }
 
   // Relationship links (dependencies, parents, children) extend the trail so the
@@ -332,7 +333,8 @@ export function Dashboard() {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="border-t p-4">
+        <SidebarFooter className="max-h-[65vh] overflow-y-auto border-t p-4">
+          <NeedsYou onSelect={(path, id) => openIssue(id, path)} />
           <SessionChanges
             session={selectedId ? sessions[selectedId] : undefined}
             onSelect={openIssue}
