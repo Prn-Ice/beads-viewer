@@ -1,4 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 
@@ -41,6 +43,11 @@ test("view-beads cli prints a link and serves the app", async () => {
   const health = await fetch(`${URL}/api/health`);
   expect(health.ok).toBe(true);
   expect((await health.json()).app).toBe("view-beads");
+
+  const pid = readFileSync(path.join(tmpdir(), `view-beads-${PORT}.pid`), "utf8").trim();
+  const processName = spawnSync("ps", ["-p", pid, "-o", "comm="], { encoding: "utf8" });
+  expect(processName.status).toBe(0);
+  expect(processName.stdout.trim()).toBe("view-beads");
 
   const projects = await fetch(`${URL}/api/projects`);
   const body = (await projects.json()) as { name: string }[];
