@@ -264,45 +264,78 @@ export function Dashboard() {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex min-h-0 min-w-0 flex-col gap-0">
-        <header className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-3 lg:gap-3">
-          <SidebarTrigger />
-          <Image src="/brand/beads.svg" alt="Beads" width={24} height={24} unoptimized className="md:hidden" />
-          <h1 className="min-w-0 flex-1 basis-[calc(100%-5rem)] truncate text-xl font-semibold tracking-tight lg:basis-0">
-            {selectedProject?.name ?? "View Beads"}
-          </h1>
-          <div className="relative order-last w-full lg:order-none lg:ml-auto lg:w-64">
-            <SearchIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search title, id, label..."
-              aria-label="Search issues"
-              className="pl-8"
-            />
-          </div>
-          <div className="flex items-center gap-1 rounded-lg border p-0.5">
-            <Button
-              variant={scope === "open" ? "secondary" : "ghost"}
-              size="sm"
-              aria-pressed={scope === "open"}
-              onClick={() => setScope("open")}
-            >
-              Open
+        <header className="flex shrink-0 flex-col border-b px-4 py-1.5">
+          <div className="flex min-w-0 items-center gap-2">
+            <SidebarTrigger />
+            <Image src="/brand/beads.svg" alt="Beads" width={24} height={24} unoptimized className="md:hidden" />
+            <h1 className="min-w-0 flex-1 truncate text-lg font-semibold tracking-tight lg:text-xl">
+              {selectedProject?.name ?? "View Beads"}
+            </h1>
+            <div className="relative ml-auto hidden w-64 lg:block">
+              <SearchIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search issues..."
+                aria-label="Search issues"
+                className="pl-8"
+              />
+            </div>
+            <div className="hidden items-center gap-1 rounded-lg border p-0.5 lg:flex">
+              <Button
+                variant={scope === "open" ? "secondary" : "ghost"}
+                size="sm"
+                aria-pressed={scope === "open"}
+                onClick={() => setScope("open")}
+              >
+                Open
+              </Button>
+              <Button
+                variant={scope === "all" ? "secondary" : "ghost"}
+                size="sm"
+                aria-pressed={scope === "all"}
+                onClick={() => setScope("all")}
+              >
+                All
+              </Button>
+            </div>
+            <Button variant="outline" size="icon" onClick={refresh} aria-label="Refresh">
+              <RotateCwIcon className="size-4" />
             </Button>
-            <Button
-              variant={scope === "all" ? "secondary" : "ghost"}
-              size="sm"
-              aria-pressed={scope === "all"}
-              onClick={() => setScope("all")}
-            >
-              All
-            </Button>
+            <ThemeSwitcher />
           </div>
-          <Button variant="outline" size="icon" onClick={refresh} aria-label="Refresh">
-            <RotateCwIcon className="size-4" />
-          </Button>
-          <ThemeSwitcher />
+          <div className="mt-1 flex items-center gap-2 lg:hidden">
+            <div className="relative flex-1">
+              <SearchIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search issues..."
+                aria-label="Search issues"
+                className="pl-8"
+              />
+            </div>
+            <div className="flex shrink-0 items-center gap-1 rounded-lg border p-0.5">
+              <Button
+                variant={scope === "open" ? "secondary" : "ghost"}
+                size="sm"
+                aria-pressed={scope === "open"}
+                onClick={() => setScope("open")}
+              >
+                Open
+              </Button>
+              <Button
+                variant={scope === "all" ? "secondary" : "ghost"}
+                size="sm"
+                aria-pressed={scope === "all"}
+                onClick={() => setScope("all")}
+              >
+                All
+              </Button>
+            </div>
+          </div>
         </header>
         {projects !== null && urlProject && !validProject && (
           <p role="status" className="border-b px-4 py-2 text-sm text-muted-foreground">

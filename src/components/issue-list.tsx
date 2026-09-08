@@ -2,14 +2,6 @@
 
 import { ArrowDownIcon, ArrowUpIcon, ArrowUpDownIcon } from "lucide-react";
 import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/badges";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { relativeTime } from "@/lib/format";
 import {
   SORT_COLUMNS,
@@ -40,39 +32,8 @@ export function IssueList({ issues, sortKey, sortDir, onSort, onSelect }: IssueL
   const sorted = sortIssuesByKey(issues, sortKey, sortDir);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {/* Mobile: an accessible labeled sort select + direction button. */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 md:hidden">
-        <label htmlFor="list-sort-select" className="text-xs text-muted-foreground">
-          Sort by
-        </label>
-        <Select
-          value={sortKey}
-          onValueChange={(value) => onSort(value as SortKey, sortDir)}
-        >
-          <SelectTrigger id="list-sort-select" size="sm" className="min-w-36" aria-label="Sort issues by">
-            <SelectValue>{SORT_COLUMNS.find((column) => column.key === sortKey)?.label}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {SORT_COLUMNS.map(({ key, label }) => (
-              <SelectItem key={key} value={key}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onSort(sortKey, nextSort(sortKey, sortKey, sortDir))}
-          aria-label={`Sort ${sortDir === "asc" ? "descending" : "ascending"}`}
-        >
-          <DirectionIcon dir={sortDir} />
-        </Button>
-      </div>
-
-      <div role="region" aria-label="Issue list" className="min-h-0 min-w-0 flex-1 overflow-auto">
-        <table className="w-full min-w-max border-collapse text-sm">
+    <div role="region" aria-label="Issue list" className="min-h-0 min-w-0 flex-1 overflow-auto">
+        <table className="hidden w-full min-w-max border-collapse text-sm md:table">
           <thead className="sticky top-0 z-10 bg-background">
             <tr className="border-b">
               {SORT_COLUMNS.map(({ key, label }) => {
@@ -146,7 +107,30 @@ export function IssueList({ issues, sortKey, sortDir, onSort, onSelect }: IssueL
             ))}
           </tbody>
         </table>
-      </div>
+      <ul className="md:hidden">
+        {sorted.length === 0 && (
+          <li className="px-4 py-8 text-center text-sm text-muted-foreground">No issues match</li>
+        )}
+        {sorted.map((issue) => (
+          <li key={issue.id}>
+            <button
+              type="button"
+              onClick={() => onSelect(issue.id)}
+              className="block w-full px-4 py-2 text-left transition-colors hover:bg-accent/40 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
+            >
+              <span className="line-clamp-2 text-sm leading-snug font-medium [overflow-wrap:anywhere]">{issue.title}</span>
+              <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+                <span className="font-mono break-all">{issue.id}</span>
+                <PriorityBadge priority={issue.priority} />
+                <StatusBadge status={issue.status} />
+                {issue.created_at && Number.isFinite(Date.parse(issue.created_at)) && (
+                  <span className="ml-auto whitespace-nowrap">{relativeTime(issue.created_at)}</span>
+                )}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

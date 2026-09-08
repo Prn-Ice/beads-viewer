@@ -9,11 +9,19 @@ The **Needs attention** panel stays available in both views, and both views use
 the exact same issue data (so project, search, and Open/All scope narrow the
 list too). Clicking a row's title opens the same issue drawer.
 
-## Columns
+## Desktop
 
 Each row shows: **ID, Title, Priority, Status, Type, Assignee, Age** (from
 `created_at`). Reused badges render priority, status, and type; age uses the
 same relative-time formatting as the board cards.
+
+## Mobile
+
+Below `md` (768px) the list renders compact **title-first rows**: a 14px medium
+title on top with a muted metadata line underneath showing the ID (mono),
+priority, status, and age. Long titles clamp to two lines and long IDs wrap, so
+rows never force horizontal scrolling. The ID, status, and priority stay visible
+at 360/390px widths.
 
 ## Sorting
 
@@ -23,9 +31,10 @@ ties.
 - **Desktop** — each column header is a native button; clicking cycles
   ascending → descending → ascending. The active header shows an arrow and the
   `th` carries `aria-sort`.
-- **Mobile** — an accessible labeled **Sort by** select picks the column and a
-  direction button toggles ascending/descending. The table scrolls horizontally
-  on narrow screens instead of hiding the sort controls.
+- **Mobile** — the sort select and a direction button live in the same compact
+  board toolbar row as the Board/List toggle and the issue count. An accessible
+  labeled select picks the column and a direction button toggles
+  ascending/descending.
 
 The default is Age ascending (creation date, oldest first). Issues with a missing
 value, invalid date, or blank assignee sort **last** in both directions rather
@@ -35,7 +44,7 @@ with column headers pinned; the toolbar and mobile sort controls remain visible.
 ## Files
 
 - `src/lib/list-sort.ts` — pure sorting logic + unit tests (`list-sort.test.ts`)
-- `src/components/issue-list.tsx` — table view component
+- `src/components/issue-list.tsx` — table (desktop) / row (mobile) view component
 - `src/components/board.tsx` — owns the Board/List toggle and sort state
 - `tests/e2e/list-view.spec.ts` — Playwright coverage
 
@@ -44,3 +53,7 @@ with column headers pinned; the toolbar and mobile sort controls remain visible.
 ![List view on desktop](screenshots/list-view-desktop.png)
 
 ![List view on mobile](screenshots/list-view-mobile.png)
+
+![Board on desktop](screenshots/board-desktop.png)
+
+![Board on mobile](screenshots/board-mobile.png)

@@ -39,8 +39,8 @@ export function NeedsAttention({ issues, onSelect }: NeedsAttentionProps) {
 
   return (
     <details className="shrink-0 border-b bg-card/40">
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium select-none [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring">
-        <AlertTriangleIcon className="size-4 text-amber-500" aria-hidden="true" />
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-1.5 text-sm font-medium text-muted-foreground select-none hover:text-foreground [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring">
+        <AlertTriangleIcon className="size-3.5 text-muted-foreground" aria-hidden="true" />
         <span>Needs attention</span>
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
           {items.length}

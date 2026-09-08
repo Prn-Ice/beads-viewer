@@ -1,12 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutGridIcon, ListIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, LayoutGridIcon, ListIcon } from "lucide-react";
 import { IssueCard } from "@/components/issue-card";
 import { IssueList } from "@/components/issue-list";
 import { NeedsAttention } from "@/components/needs-attention";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { bucketIssues, type BoardColumns } from "@/lib/buckets";
-import type { SortDir, SortKey } from "@/lib/list-sort";
+import { SORT_COLUMNS, nextSort, type SortDir, type SortKey } from "@/lib/list-sort";
 import type { BeadsIssue } from "@/lib/types";
 
 interface BoardProps {
@@ -44,7 +52,7 @@ export function Board({ issues, readyIds, includeClosed, onSelect }: BoardProps)
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center gap-1 border-b px-4 py-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b px-4 py-1.5">
         <div className="flex items-center gap-1 rounded-lg border p-0.5" role="group" aria-label="Board view">
           <button
             type="button"
@@ -54,7 +62,7 @@ export function Board({ issues, readyIds, includeClosed, onSelect }: BoardProps)
               view === "board" ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <LayoutGridIcon className="size-3.5" aria-hidden="true" />
+            <LayoutGridIcon className="hidden size-3.5 md:inline" aria-hidden="true" />
             Board
           </button>
           <button
@@ -65,13 +73,41 @@ export function Board({ issues, readyIds, includeClosed, onSelect }: BoardProps)
               view === "list" ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <ListIcon className="size-3.5" aria-hidden="true" />
+            <ListIcon className="hidden size-3.5 md:inline" aria-hidden="true" />
             List
           </button>
         </div>
-        <span className="text-xs text-muted-foreground">
-          {view === "board" ? "Board" : "List"} · {listIssues.length} issues
-        </span>
+        <span className="text-xs whitespace-nowrap text-muted-foreground">{listIssues.length} issues</span>
+        <div className="ml-auto flex shrink-0 items-center gap-2 md:hidden">
+          {view === "list" && (
+            <>
+              <Select value={sortKey} onValueChange={(value) => handleSort(value as SortKey, sortDir)}>
+                <SelectTrigger size="sm" className="w-24 min-w-0 text-xs" aria-label="Sort issues by">
+                  <SelectValue>{SORT_COLUMNS.find((column) => column.key === sortKey)?.label}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {SORT_COLUMNS.map(({ key, label }) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleSort(sortKey, nextSort(sortKey, sortKey, sortDir))}
+                aria-label={`Sort ${sortDir === "asc" ? "descending" : "ascending"}`}
+              >
+                {sortDir === "asc" ? (
+                  <ArrowUpIcon className="size-3.5" aria-hidden="true" />
+                ) : (
+                  <ArrowDownIcon className="size-3.5" aria-hidden="true" />
+                )}
+              </Button>
+            </>
+          )}
+        </div>
       </div>
       <NeedsAttention issues={issues} onSelect={onSelect} />
       {view === "list" ? (
