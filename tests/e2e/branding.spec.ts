@@ -85,9 +85,18 @@ for (const width of [390, 1280]) {
     });
     await page.goto("/");
     if (width < 768) {
-      await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+      const picker = page.getByRole("button", { name: "Choose project" });
+      await expect(picker).toBeVisible();
+      await expect(picker).toContainText(name);
+      await expect(picker.locator("span").filter({ hasText: name })).toHaveCSS("text-overflow", "ellipsis");
+      expect(
+        await picker.locator("span").filter({ hasText: name }).evaluate((element) => element.scrollWidth > element.clientWidth),
+      ).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+      await picker.click();
     }
-    const project = page.getByRole("button", { name: new RegExp(name) });
+    const sidebar = width < 768 ? page.getByRole("dialog") : page.locator('[data-slot="sidebar"]');
+    const project = sidebar.getByRole("button", { name: new RegExp(name) });
     await expect(project).toBeVisible();
     await expect(project).toHaveAttribute("title", name);
     const label = project.locator("span");
@@ -143,7 +152,7 @@ for (const width of [360, 390, 768]) {
     await expect(drawer.getByText("Fix merged in #42")).toBeVisible();
     await page.keyboard.press("Escape");
     if (width < 768) {
-      await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+      await page.getByRole("button", { name: "Choose project" }).click();
       const sidebar = page.getByRole("dialog");
       await expect(sidebar.getByRole("img", { name: "Beads" })).toBeVisible();
       await page.evaluate(() => document.fonts.ready);
@@ -159,3 +168,56 @@ for (const width of [360, 390, 768]) {
     await expect(page.getByRole("heading", { name: "beta", exact: true })).toBeVisible();
   });
 }
+
+test.describe("mobile project picker", () => {
+  test("keyboard opens the sidebar and Escape returns focus", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    const picker = page.getByRole("button", { name: "Choose project" });
+    await expect(picker).toBeVisible();
+    await expect(picker.locator("span")).toHaveText("alpha");
+    const gaps = await picker.evaluate((element) => {
+      const logo = element.querySelector("img")!.getBoundingClientRect();
+      const name = element.querySelector("span")!.getBoundingClientRect();
+      const chevron = element.querySelector("svg")!.getBoundingClientRect();
+      return [name.left - logo.right, chevron.left - name.right];
+    });
+    for (const gap of gaps) expect(gap).toBeCloseTo(8, 0);
+    await expect(page.getByRole("button", { name: "Toggle Sidebar", exact: true })).toHaveCount(0);
+    await expect(picker).toHaveAttribute("aria-haspopup", "dialog");
+    await expect(picker).toHaveAttribute("aria-expanded", "false");
+    await picker.focus();
+    await picker.press("Enter");
+    const sidebar = page.getByRole("dialog");
+    await expect(sidebar).toBeVisible();
+    // The open dialog makes the header inert, so read the expanded state from the DOM.
+    await expect(page.locator('button[aria-haspopup="dialog"][aria-expanded="true"]')).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(sidebar).toHaveCount(0);
+    await expect(picker).toBeFocused();
+    await expect(picker).toHaveAttribute("aria-expanded", "false");
+  });
+
+  test("choosing a project updates the header picker and heading", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Choose project" }).click();
+    const sidebar = page.getByRole("dialog");
+    await sidebar.getByRole("button", { name: /^beta/ }).click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("button", { name: /Choose project: beta/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "beta", exact: true })).toBeVisible();
+  });
+
+  test("desktop keeps the sidebar collapse trigger and project heading", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+    const trigger = page.getByRole("button", { name: "Toggle Sidebar", exact: true });
+    await expect(trigger).toBeVisible();
+    await expect(page.getByRole("button", { name: "Choose project" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "alpha", exact: true })).toBeVisible();
+    await trigger.click();
+    await expect(trigger).toBeVisible();
+    await expect(page.getByRole("heading", { name: "alpha", exact: true })).toBeVisible();
+  });
+});

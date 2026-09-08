@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { RotateCwIcon, SearchIcon } from "lucide-react";
+import { ChevronDownIcon, RotateCwIcon, SearchIcon } from "lucide-react";
 import { Board } from "@/components/board";
 import { readDeepLink, withDeepLink } from "@/lib/navigation";
 import { IssueDrawer } from "@/components/issue-drawer";
@@ -26,6 +26,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import type { BeadsIssue, IssueListResponse, Project } from "@/lib/types";
 
@@ -43,6 +44,37 @@ function matchesSearch(issue: BeadsIssue, query: string): boolean {
     issue.id.toLowerCase().includes(q) ||
     issue.title.toLowerCase().includes(q) ||
     (issue.labels ?? []).some((label) => label.toLowerCase().includes(q))
+  );
+}
+
+// Mobile-only replacement for the desktop SidebarTrigger + heading: one button
+// (logo, truncated project name, chevron) that opens the mobile sidebar sheet.
+// Must stay inside SidebarProvider, so it lives here rather than in ui/.
+function ProjectPickerButton({ name }: { name: string | null }) {
+  const { openMobile, setOpenMobile } = useSidebar();
+  return (
+    <Button
+      variant="ghost"
+      size="lg"
+      className="min-w-0 flex-1 justify-start gap-2 px-0 md:hidden"
+      aria-haspopup="dialog"
+      aria-expanded={openMobile}
+      aria-label={`Choose project: ${name ?? "View Beads"}`}
+      onClick={() => setOpenMobile(true)}
+    >
+      <Image
+        src="/brand/beads.svg"
+        alt="Beads"
+        width={24}
+        height={24}
+        unoptimized
+        className="shrink-0"
+      />
+      <span className="min-w-0 truncate text-lg font-semibold tracking-tight">
+        {name ?? "View Beads"}
+      </span>
+      <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+    </Button>
   );
 }
 
@@ -266,9 +298,9 @@ export function Dashboard() {
       <SidebarInset className="flex min-h-0 min-w-0 flex-col gap-0">
         <header className="flex shrink-0 flex-col border-b px-4 py-1.5">
           <div className="flex min-w-0 items-center gap-2">
-            <SidebarTrigger />
-            <Image src="/brand/beads.svg" alt="Beads" width={24} height={24} unoptimized className="md:hidden" />
-            <h1 className="min-w-0 flex-1 truncate text-lg font-semibold tracking-tight lg:text-xl">
+            <SidebarTrigger className="hidden md:inline-flex" />
+            <ProjectPickerButton name={selectedProject?.name ?? null} />
+            <h1 className="max-md:sr-only min-w-0 flex-1 truncate text-lg font-semibold tracking-tight lg:text-xl">
               {selectedProject?.name ?? "View Beads"}
             </h1>
             <div className="relative ml-auto hidden w-64 lg:block">

@@ -41,9 +41,12 @@ for (const width of [1280, 390]) {
     expect.soft(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(800);
     const controls = [
       page.getByRole("searchbox"),
-      ...["Open", "All", "Refresh", "Change theme", "Toggle Sidebar"].map(
+      ...["Open", "All", "Refresh", "Change theme"].map(
         (name) => page.getByRole("button", { name, exact: true }),
       ),
+      width < 768
+        ? page.getByRole("button", { name: "Choose project" })
+        : page.getByRole("button", { name: "Toggle Sidebar", exact: true }),
     ];
     for (const control of controls) {
       await expect(control).toBeInViewport({ ratio: 1 });
