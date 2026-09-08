@@ -181,14 +181,14 @@ function CanvasBody({
         aria-label="Dependency connections"
       >
         <defs>
-          <marker id={`${uid}-arrow-blocks`} markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
-            <path d="M0,0 L0,6 L6,3 z" fill="var(--destructive)" />
+          <marker id={`${uid}-arrow-blocks`} markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" viewBox="0 0 8 8" refX="8" refY="4" orient="auto">
+            <path d="M0,0 L0,8 L8,4 z" fill="var(--destructive)" />
           </marker>
-          <marker id={`${uid}-arrow-parent`} markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
-            <path d="M0,0 L0,6 L6,3 z" fill="var(--primary)" />
+          <marker id={`${uid}-arrow-parent`} markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" viewBox="0 0 8 8" refX="8" refY="4" orient="auto">
+            <path d="M0,0 L0,8 L8,4 z" fill="var(--primary)" />
           </marker>
-          <marker id={`${uid}-arrow-other`} markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
-            <path d="M0,0 L0,6 L6,3 z" fill="var(--muted-foreground)" />
+          <marker id={`${uid}-arrow-other`} markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" viewBox="0 0 8 8" refX="8" refY="4" orient="auto">
+            <path d="M0,0 L0,8 L8,4 z" fill="var(--muted-foreground)" />
           </marker>
         </defs>
         {edges.map((edge) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
-import { InboxIcon, RotateCwIcon } from "lucide-react";
+import { ChevronRightIcon, InboxIcon, RotateCwIcon } from "lucide-react";
 import { PriorityBadge } from "@/components/badges";
 import { Button } from "@/components/ui/button";
 import { totalNeedsYou, type NeedsYouResponse } from "@/lib/needs-you";
@@ -57,8 +57,8 @@ export function NeedsYou({ onSelect }: NeedsYouProps) {
   const countLabel = error ? "!" : failedProjects.length ? (count ? `${count}+` : "?") : String(count);
 
   return (
-    <details aria-label="Needs you" onToggle={onToggle} className="min-w-0">
-      <summary className="flex cursor-pointer items-center gap-2 rounded py-1 text-xs text-muted-foreground select-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+    <details aria-label="Needs you" onToggle={onToggle} className="group min-w-0">
+      <summary className="flex cursor-pointer list-none items-center gap-2 rounded py-1 text-xs text-muted-foreground select-none hover:text-foreground [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-ring">
         <InboxIcon className="size-3.5 shrink-0" aria-hidden="true" />
         <span className="min-w-0 flex-1">Needs you</span>
         {(count !== null || error) && (
@@ -66,6 +66,7 @@ export function NeedsYou({ onSelect }: NeedsYouProps) {
             {countLabel}
           </span>
         )}
+        <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden="true" />
       </summary>
       <div role="region" aria-label="Needs you" className="mt-2 flex max-h-[45vh] min-w-0 flex-col gap-2 overflow-y-auto pr-1">
         <p className="text-xs text-muted-foreground">

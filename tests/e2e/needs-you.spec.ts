@@ -238,4 +238,54 @@ test.describe("needs you inbox", () => {
     await expect(page.getByRole("dialog").getByRole("heading", { name: "Fix crash on startup" })).toBeVisible();
     expect(new URL(page.url()).searchParams.get("project")).toBe(ALPHA);
   });
+
+  test("needs you and session changes share one explicit rotating caret each, keyboard toggled", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const control: Control = {
+      projects: [{ path: ALPHA, name: "alpha", issues: [issue("alpha-1", "Fix crash on startup")] }],
+      requests: 0,
+      fail: false,
+    };
+    await stubNeedsYou(page, control);
+    await page.goto("/");
+
+    const sidebar = page.locator('[data-slot="sidebar"]');
+    const needsYouSummary = panel(page).locator("summary");
+    const sessionSummary = sidebar.locator("summary", { hasText: "Session changes" });
+    const needsYouCaret = needsYouSummary.locator(".lucide-chevron-right");
+    const sessionCaret = sessionSummary.locator(".lucide-chevron-right");
+
+    // Exactly two explicit carets in the sidebar, native markers suppressed.
+    await expect(sidebar.locator(".lucide-chevron-right")).toHaveCount(2);
+    await expect(needsYouCaret).toHaveCount(1);
+    await expect(sessionCaret).toHaveCount(1);
+    const rightEdges = await sidebar.locator(".lucide-chevron-right").evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().right));
+    expect(rightEdges[0]).toBeCloseTo(rightEdges[1], 0);
+    for (const item of [needsYouSummary, sessionSummary]) {
+      // Native markers are suppressed cross-browser: list-style:none for
+      // Firefox, the ::-webkit-details-marker rule for Chromium.
+      expect(await item.evaluate((el) => getComputedStyle(el).listStyleType)).toBe("none");
+      expect(await item.evaluate((el) => [...el.classList].some((name) => name.includes("details-marker")))).toBe(true);
+    }
+
+    // Closed: caret points right. Open by keyboard: caret rotates 90°.
+    await expect(needsYouCaret).toHaveCSS("rotate", "none");
+    await expect(sessionCaret).toHaveCSS("rotate", "none");
+    await needsYouSummary.focus();
+    await page.keyboard.press("Enter");
+    await expect(panel(page)).toHaveAttribute("open", "");
+    await expect(needsYouCaret).toHaveCSS("rotate", "90deg");
+    await expect(sessionCaret).toHaveCSS("rotate", "none");
+    await sessionSummary.focus();
+    await page.keyboard.press("Enter");
+    await expect(sessionSummary.locator("xpath=..")).toHaveAttribute("open", "");
+    await expect(sessionCaret).toHaveCSS("rotate", "90deg");
+
+    // Closing again restores the right-pointing caret.
+    await needsYouSummary.focus();
+    await page.keyboard.press("Enter");
+    await expect(panel(page)).not.toHaveAttribute("open", "");
+    await expect(needsYouCaret).toHaveCSS("rotate", "none");
+    await expect(sessionCaret).toHaveCSS("rotate", "90deg");
+  });
 });

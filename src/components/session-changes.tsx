@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { sessionChanges, type ObservedSession } from "@/lib/session-changes";
 
@@ -10,9 +11,10 @@ export function SessionChanges({ session, onReset, onSelect }: {
 }) {
   const changes = sessionChanges(session);
   return (
-    <details className="min-w-0">
-      <summary className="cursor-pointer rounded py-1 text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring">
-        Session changes ({changes.length})
+    <details className="group min-w-0">
+      <summary className="flex cursor-pointer list-none items-center gap-2 rounded py-1 text-xs text-muted-foreground select-none hover:text-foreground [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-ring">
+        <span className="min-w-0 flex-1">Session changes ({changes.length})</span>
+        <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden="true" />
       </summary>
       <div role="region" aria-label="Session changes" className="mt-2 flex min-w-0 flex-col gap-2">
         <p className="text-xs text-muted-foreground">Current project, last observed changes. Not a complete activity history.</p>

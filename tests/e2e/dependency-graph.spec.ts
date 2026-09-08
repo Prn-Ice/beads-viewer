@@ -471,3 +471,83 @@ test("clicking a node in the large view opens the root drawer", async ({ page })
   await drawer.getByRole("button", { name: "Back", exact: true }).click();
   await expect(drawer.getByRole("heading", { name: "Issue alpha-1" })).toBeVisible();
 });
+
+test("all three arrow markers share user-space geometry with the tip at the endpoint", async ({ page }) => {
+  const { drawer } = await setup(page);
+  await openGraph(drawer);
+  await expect(graphRegion(drawer).getByRole("button", { name: /alpha-1: Issue alpha-1/ })).toBeVisible();
+
+  const markers = await graphRegion(drawer).locator("svg marker").evaluateAll((elements) =>
+    elements.map((element) => {
+      const marker = element as SVGMarkerElement;
+      const path = marker.querySelector("path") as SVGGeometryElement | null;
+      const box = path?.getBBox();
+      return {
+        markerUnits: marker.getAttribute("markerUnits"),
+        markerWidth: marker.getAttribute("markerWidth"),
+        markerHeight: marker.getAttribute("markerHeight"),
+        viewBox: marker.getAttribute("viewBox"),
+        refX: marker.getAttribute("refX"),
+        refY: marker.getAttribute("refY"),
+        orient: marker.getAttribute("orient"),
+        d: path?.getAttribute("d"),
+        width: box?.width ?? 0,
+        height: box?.height ?? 0,
+      };
+    }),
+  );
+  expect(markers).toHaveLength(3);
+  for (const marker of markers) {
+    // Fixed user-space units: the arrowhead keeps one size on every edge,
+    // regardless of the parent-child 2.5 vs 1.5 stroke width.
+    expect(marker.markerUnits).toBe("userSpaceOnUse");
+    expect(marker.markerWidth).toBe("8");
+    expect(marker.markerHeight).toBe("8");
+    expect(marker.viewBox).toBe("0 0 8 8");
+    // refX sits exactly on the triangle tip (right edge), refY at the center,
+    // so the tip lands on the path endpoint and never detaches.
+    expect(marker.refX).toBe("8");
+    expect(marker.refY).toBe("4");
+    expect(marker.orient).toBe("auto");
+    expect(marker.width).toBeCloseTo(8, 1);
+    expect(marker.height).toBeCloseTo(8, 1);
+  }
+  // The three types share identical geometry; only the fill differs.
+  expect(new Set(markers.map((marker) => `${marker.viewBox}|${marker.d}|${marker.width}|${marker.height}`)).size).toBe(1);
+});
+
+test("arrowheads stay proportional to the graph at 125% and 80% zoom with no clamp", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 844 });
+  const { drawer } = await setup(page);
+  await openGraph(drawer);
+  await drawer.getByRole("button", { name: "Expand graph", exact: true }).click();
+  const dialog = largeDialog(page);
+  await expect(dialog).toBeVisible();
+
+  async function arrowSize() {
+    return dialog.getByRole("group", { name: "Dependency connections" }).evaluate((svg) => {
+      const markerPath = svg.querySelector("marker path") as SVGGeometryElement | null;
+      const userSize = markerPath?.getBBox().width ?? 0;
+      const edge = svg.querySelector("g[data-edge] path[stroke-width]") as SVGPathElement | null;
+      const ctm = edge?.getScreenCTM();
+      const scale = ctm ? Math.hypot(ctm.a, ctm.b) : 0;
+      return { userSize, screenSize: userSize * scale };
+    });
+  }
+
+  const base = await arrowSize();
+  expect(base.userSize).toBeCloseTo(8, 1);
+
+  await dialog.getByRole("button", { name: "Zoom in", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Reset zoom" })).toHaveText("125%");
+  const zoomed = await arrowSize();
+  expect(zoomed.userSize).toBe(base.userSize); // user-space geometry never changes
+  expect(zoomed.screenSize).toBeCloseTo(base.screenSize * 1.25, 1);
+
+  await dialog.getByRole("button", { name: "Zoom out", exact: true }).click();
+  await dialog.getByRole("button", { name: "Zoom out", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Reset zoom" })).toHaveText("80%");
+  const out = await arrowSize();
+  expect(out.userSize).toBe(base.userSize);
+  expect(out.screenSize).toBeCloseTo(base.screenSize * 0.8, 1);
+});
