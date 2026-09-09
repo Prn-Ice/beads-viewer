@@ -45,6 +45,9 @@ export interface BeadsIssue {
   defer_until?: string | null;
   due_at?: string | null;
   pinned?: boolean | null;
+  is_template?: boolean | null;
+  ephemeral?: boolean | null;
+  no_history?: boolean | null;
   metadata?: Record<string, string> | null;
 }
 
