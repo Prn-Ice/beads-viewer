@@ -46,6 +46,13 @@ Every beads project found on your machine, in this order:
 
 Override the search roots with `BEADS_PROJECT_ROOTS=/path/a,/path/b`.
 
+Checkouts that are linked git worktrees (their `.git` is a file, not a
+directory — e.g. the `beads-viewer-worker-*` worktrees from
+[docs/workers.md](docs/workers.md)) are grouped under a separate **Worktrees**
+sidebar section instead of cluttering the main project list. Projects whose
+`.beads` exists but no longer works with the installed `bd` (e.g. a stale
+pre-dolt database) land under **Broken** with a warning marker.
+
 ### GitHub projects
 
 Set `BEADS_GITHUB_REPOS=owner/repo,owner/repo` to also show beads projects
@@ -90,7 +97,7 @@ Environment variables: `BEADS_BIN` (path to `bd`), `BEADS_HOME` (where
 ## Architecture
 
 - `src/lib/bd.ts` — spawns `bd --json`, the only data access
-- `src/lib/discovery.ts` — finds beads projects
+- `src/lib/discovery.ts` — finds beads projects, flags git worktrees
 - `src/lib/github.ts` — sparse-clone mirror of GitHub beads repos
 - `src/lib/cache.ts` — small TTL cache over `bd` output
 - `src/app/api/*` — thin JSON endpoints
