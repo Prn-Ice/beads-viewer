@@ -6,16 +6,25 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   cloneDir,
+  configuredGithubRepos,
   forceSyncGithubRepos,
+  listGhRepos,
   listMaterializedGithubProjects,
   loadGithubProject,
   parseGithubRepos,
   syncGithubRepo,
 } from "./github";
+import { writeGithubRepos } from "./config";
 
 const FAKE_GH = fileURLToPath(new URL("../../tests/fixtures/fake-gh.mjs", import.meta.url));
 
-const ENV_KEYS = ["GH_BIN", "BEADS_GITHUB_REPOS", "BEADS_GITHUB_CACHE", "BEADS_GITHUB_URL_BASE"];
+const ENV_KEYS = [
+  "GH_BIN",
+  "BEADS_GITHUB_REPOS",
+  "BEADS_GITHUB_CACHE",
+  "BEADS_GITHUB_URL_BASE",
+  "VIEW_BEADS_CONFIG",
+];
 
 let savedEnv: Record<string, string | undefined>;
 let root: string;
@@ -107,6 +116,35 @@ describe("parseGithubRepos", () => {
   });
 });
 
+describe("configuredGithubRepos", () => {
+  it("falls back to the config file when BEADS_GITHUB_REPOS is unset", () => {
+    delete process.env.BEADS_GITHUB_REPOS;
+    process.env.VIEW_BEADS_CONFIG = join(root, "config.json");
+    writeGithubRepos(["o/r1", "o/r2"]);
+    expect(configuredGithubRepos()).toEqual([{ slug: "o/r1" }, { slug: "o/r2" }]);
+  });
+
+  it("returns nothing when neither env nor file configure repos", () => {
+    delete process.env.BEADS_GITHUB_REPOS;
+    process.env.VIEW_BEADS_CONFIG = join(root, "config.json");
+    expect(configuredGithubRepos()).toEqual([]);
+  });
+
+  it("lets BEADS_GITHUB_REPOS win over the config file", () => {
+    process.env.BEADS_GITHUB_REPOS = "env/one, env/two";
+    process.env.VIEW_BEADS_CONFIG = join(root, "config.json");
+    writeGithubRepos(["file/one"]);
+    expect(configuredGithubRepos()).toEqual([{ slug: "env/one" }, { slug: "env/two" }]);
+  });
+
+  it("ignores a blank BEADS_GITHUB_REPOS and uses the file", () => {
+    process.env.BEADS_GITHUB_REPOS = "   ";
+    process.env.VIEW_BEADS_CONFIG = join(root, "config.json");
+    writeGithubRepos(["file/one"]);
+    expect(configuredGithubRepos()).toEqual([{ slug: "file/one" }]);
+  });
+});
+
 describe("listMaterializedGithubProjects", () => {
   it("returns nothing when no remotes are configured", () => {
     process.env.BEADS_GITHUB_REPOS = "";
@@ -132,6 +170,42 @@ describe("listMaterializedGithubProjects", () => {
     expect(listMaterializedGithubProjects()).toEqual([
       { path: join(root, "cache", "o/d1"), name: "o/d1" },
     ]);
+  });
+});
+
+describe("listGhRepos", () => {
+  // Scripted gh doubles that log argv and either serve repos or complain that
+  // an owner handle (like @me) is unknown — this guard pins the no-owner
+  // query because some gh versions reject "@me" explicitly.
+  it("queries gh repo list without an owner handle", async () => {
+    const argvLog = join(root, "gh-argv.log");
+    writeFileSync(
+      join(root, "fake-gh-list.mjs"),
+      [
+        `#!/usr/bin/env node`,
+        `import { appendFileSync } from "node:fs";`,
+        `appendFileSync(${JSON.stringify(argvLog)}, process.argv.slice(2).join(" ") + "\\n");`,
+        `if (process.argv.includes("@me")) {`,
+        `  console.error("the owner handle \\"@me\\" was not recognized");`,
+        `  process.exit(1);`,
+        `}`,
+        `console.log(JSON.stringify([{ nameWithOwner: "o/r1", isPrivate: false }]));`,
+        "",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+    process.env.GH_BIN = join(root, "fake-gh-list.mjs");
+
+    const repos = await listGhRepos();
+    expect(repos).toEqual([{ slug: "o/r1", private: false }]);
+    const argv = readFileSync(argvLog, "utf8");
+    expect(argv).toContain("repo list");
+    expect(argv).not.toContain("@me");
+  });
+
+  it("errors with a friendly message when gh is unavailable", async () => {
+    process.env.GH_BIN = join(root, "no-such-gh");
+    await expect(listGhRepos()).rejects.toThrow(/gh not available or not authenticated/);
   });
 });
 

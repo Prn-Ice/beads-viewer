@@ -77,6 +77,7 @@ See [worker setup](docs/workers.md) for worktree preparation and test ports.
 - `src/lib/bd.ts` — spawns `bd --json`, parses output (all data access)
 - `src/lib/discovery.ts` — finds beads projects (cwd walk-up, registry, scan roots) and flags git worktrees (`.git` is a file); the sidebar groups those under **Worktrees**
 - `src/lib/github.ts` — mirrors GitHub beads repos as sparse clones (auth via `gh`)
+- `src/lib/config.ts` — local config file (repo selection), read per request, atomic writes
 - `src/lib/cache.ts` — tiny TTL cache for bd output
 - `src/app/api/*` — JSON endpoints; no DB, thin wrappers over `bd`
 - `src/app/page.tsx` + `src/components/*` — client UI (sidebar, board, drawer)
@@ -90,8 +91,10 @@ pauses polling in hidden tabs, and refreshes on return. These endpoints use a
 PATH). Project discovery roots come from `BEADS_PROJECT_ROOTS` (comma
 separated, default: cwd, `~/Projects`, `~/Dotfiles`).
 
-Repos listed in `BEADS_GITHUB_REPOS` (comma separated `owner/repo`) are
-mirrored as shallow sparse clones of `.beads/` under `~/.cache/view-beads/github`
+Repos listed in `BEADS_GITHUB_REPOS` (comma separated `owner/repo`) — or, when
+that env var is unset, selected via the settings panel and persisted to the
+local config file (see `src/lib/config.ts`) — are mirrored as shallow sparse
+clones of `.beads/` under `~/.cache/view-beads/github`
 (`BEADS_GITHUB_CACHE`), authenticated per-invocation via `gh auth token`
 (`GH_BIN` override) passed as a Basic `http.extraheader` (GitHub's git
 endpoint rejects Bearer; `GIT_TERMINAL_PROMPT=0` keeps git from ever

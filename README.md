@@ -55,10 +55,15 @@ pre-dolt database) land under **Broken** with a warning marker.
 
 ### GitHub projects
 
-Set `BEADS_GITHUB_REPOS=owner/repo,owner/repo` to also show beads projects
-straight from GitHub — no local clone needed. Each repo is mirrored as a
-shallow, sparse clone (just the `.beads` directory) under
-`~/.cache/view-beads/github` (override with `BEADS_GITHUB_CACHE`) and
+Show beads projects straight from GitHub — no local clone needed. Pick repos
+from the GitHub settings panel (the gear button in the sidebar's GitHub group),
+which lists your `gh` repos and persists the selection to
+`~/.config/view-beads/config.json` (override with `VIEW_BEADS_CONFIG`). The
+change applies on the next request — no server restart. Alternatively set
+`BEADS_GITHUB_REPOS=owner/repo,owner/repo`; the env var wins when set.
+
+Each repo is mirrored as a shallow, sparse clone (just the `.beads` directory)
+under `~/.cache/view-beads/github` (override with `BEADS_GITHUB_CACHE`) and
 re-fetched at most once a minute.
 
 Git only syncs the JSONL exports — the beads database is gitignored — so on
@@ -91,13 +96,15 @@ npm run build     # production build (.next/standalone)
 
 Environment variables: `BEADS_BIN` (path to `bd`), `BEADS_HOME` (where
 `registry.json` lives), `BEADS_PROJECT_ROOTS`, `BEADS_GITHUB_REPOS`,
-`BEADS_GITHUB_CACHE`, `GH_BIN` (path to `gh`), `VIEW_BEADS_SERVER` (built
+`BEADS_GITHUB_CACHE`, `GH_BIN` (path to `gh`), `VIEW_BEADS_CONFIG` (config file
+path), `VIEW_BEADS_SERVER` (built
 `server.js`), `VIEW_BEADS_NO_OPEN`.
 
 ## Architecture
 
 - `src/lib/bd.ts` — spawns `bd --json`, the only data access
 - `src/lib/discovery.ts` — finds beads projects, flags git worktrees
+- `src/lib/config.ts` — local config file (repo selection), atomic writes
 - `src/lib/github.ts` — sparse-clone mirror of GitHub beads repos
 - `src/lib/cache.ts` — small TTL cache over `bd` output
 - `src/app/api/*` — thin JSON endpoints

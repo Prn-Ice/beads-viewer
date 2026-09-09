@@ -3,13 +3,13 @@ import { clearCache } from "@/lib/cache";
 import { GET } from "./route";
 
 vi.mock("@/lib/github", () => ({
-  parseGithubRepos: vi.fn(),
+  configuredGithubRepos: vi.fn(),
   loadGithubProject: vi.fn(),
 }));
 vi.mock("@/lib/bd", () => ({ runBd: vi.fn() }));
 
 import { runBd } from "@/lib/bd";
-import { loadGithubProject, parseGithubRepos } from "@/lib/github";
+import { configuredGithubRepos, loadGithubProject } from "@/lib/github";
 
 const SUMMARY = {
   total_issues: 3,
@@ -27,7 +27,7 @@ function get(slug: string) {
 }
 
 beforeEach(() => {
-  vi.mocked(parseGithubRepos).mockReturnValue([{ slug: "o/r" }]);
+  vi.mocked(configuredGithubRepos).mockReturnValue([{ slug: "o/r" }]);
   vi.mocked(loadGithubProject).mockResolvedValue({
     state: "ok",
     path: "/cache/o/r",

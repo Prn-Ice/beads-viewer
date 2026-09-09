@@ -12,6 +12,7 @@ import { observeSession, resetSession, type ObservedSession } from "@/lib/sessio
 import { readDeepLink, withDeepLink } from "@/lib/navigation";
 import { IssueDrawer } from "@/components/issue-drawer";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import { GithubSettings } from "@/components/github-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -135,13 +136,14 @@ function GithubRepoGroup({
   repos,
   selectedId,
   onSelect,
+  onSaved,
 }: {
   repos: GithubRepoEntry[];
   selectedId: string | null;
   onSelect: (path: string) => void;
+  onSaved: () => void;
 }) {
   const visible = repos.filter((entry) => entry.state !== "empty");
-  if (visible.length === 0) return null;
   const syncing = repos.some((entry) => entry.state === "loading");
   return (
     <SidebarGroup>
@@ -151,8 +153,10 @@ function GithubRepoGroup({
         {syncing && (
           <LoaderCircleIcon className="size-3 animate-spin text-muted-foreground" aria-hidden />
         )}
+        <GithubSettings onSaved={onSaved} />
       </SidebarGroupLabel>
-      <SidebarGroupContent>
+      {visible.length > 0 && (
+        <SidebarGroupContent>
         <SidebarMenu>
           {visible.map((entry) => {
             if (entry.state === "loading") {
@@ -201,7 +205,8 @@ function GithubRepoGroup({
             );
           })}
         </SidebarMenu>
-      </SidebarGroupContent>
+        </SidebarGroupContent>
+      )}
     </SidebarGroup>
   );
 }
@@ -405,6 +410,14 @@ export function Dashboard() {
     setReloadKey((k) => k + 1);
   }
 
+  // After the settings panel saves a new repo selection, drop the current
+  // entries and re-run the sweep so removed repos disappear and new ones
+  // stream in as loading rows.
+  function onGithubSaved() {
+    setGithubRepos([]);
+    setReloadKey((k) => k + 1);
+  }
+
   // Reads the live query string instead of the hook's searchParams so rapid
   // changes (typing, filter toggles) never build a URL from a stale snapshot.
   function liveParams(): URLSearchParams {
@@ -576,7 +589,12 @@ export function Dashboard() {
               </SidebarGroupContent>
             </SidebarGroup>
           )}
-          <GithubRepoGroup repos={githubRepos} selectedId={selectedId} onSelect={selectProject} />
+          <GithubRepoGroup
+            repos={githubRepos}
+            selectedId={selectedId}
+            onSelect={selectProject}
+            onSaved={onGithubSaved}
+          />
         </SidebarContent>
         <SidebarFooter className="max-h-[65vh] overflow-y-auto border-t p-4">
           <NeedsYou onSelect={(path, id) => openIssue(id, path)} />

@@ -129,4 +129,106 @@ test.describe("github projects", () => {
     await expect(page.getByRole("button", { name: /gh-1.*Remote issue from GitHub/ })).toBeVisible();
     await expect(banner).toHaveCount(0);
   });
+
+  test("picker: choose a repo, save, and it streams into the sidebar", async ({ page }) => {
+    // gh's repo list for the settings panel.
+    await page.route("**/api/github/available", (route) =>
+      route.fulfill({
+        json: {
+          repos: [
+            { slug: "o/pick", private: false },
+            { slug: "o/skip", private: true },
+          ],
+        },
+      }),
+    );
+
+    // Config GET reflects a local file; capture what the UI PUTs.
+    const configFile = { repos: [] as string[] };
+    let putBody: unknown = null;
+    await page.route("**/api/github/config", async (route) => {
+      const request = route.request();
+      if (request.method() === "PUT") {
+        putBody = request.postDataJSON();
+        configFile.repos = (putBody as { repos: string[] }).repos;
+        return route.fulfill({ json: { repos: configFile.repos } });
+      }
+      return route.fulfill({
+        json: { repos: configFile.repos, source: configFile.repos.length ? "file" : "none" },
+      });
+    });
+
+    // The sweep's repo list is driven by the saved config.
+    await page.route("**/api/github/repos", (route) =>
+      route.fulfill({ json: configFile.repos.map((slug) => ({ slug })) }),
+    );
+    await repoLoads(page, (slug) =>
+      slug === "o/pick"
+        ? { body: { slug, state: "ok", project: { ...GH_PROJECT, name: "o/pick" } } }
+        : undefined,
+    );
+
+    await page.goto("/");
+
+    // Open settings from the gear button in the GitHub group label.
+    await page.getByRole("button", { name: "GitHub repo settings" }).click();
+    await expect(page.getByRole("heading", { name: "GitHub repositories" })).toBeVisible();
+
+    // Check one repo and save.
+    await page.getByRole("checkbox", { name: "o/pick" }).check();
+    await page.getByRole("button", { name: "Save" }).click();
+
+    // The saved repo streams into the sidebar; PUT carried the slug.
+    await expect(page.getByRole("button", { name: "o/pick" })).toBeVisible();
+    expect(putBody).toEqual({ repos: ["o/pick"] });
+  });
+
+  test("picker: unchecking all and saving empties the GitHub group", async ({ page }) => {
+    await page.route("**/api/github/available", (route) =>
+      route.fulfill({ json: { repos: [{ slug: "o/pick", private: false }] } }),
+    );
+    const configFile = { repos: ["o/pick"] as string[] };
+    await page.route("**/api/github/config", async (route) => {
+      const request = route.request();
+      if (request.method() === "PUT") {
+        configFile.repos = (request.postDataJSON() as { repos: string[] }).repos;
+        return route.fulfill({ json: { repos: configFile.repos } });
+      }
+      return route.fulfill({
+        json: { repos: configFile.repos, source: configFile.repos.length ? "file" : "none" },
+      });
+    });
+    await page.route("**/api/github/repos", (route) =>
+      route.fulfill({ json: configFile.repos.map((slug) => ({ slug })) }),
+    );
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "GitHub repo settings" }).click();
+    await expect(page.getByRole("checkbox", { name: "o/pick" })).toBeVisible();
+    await page.getByRole("checkbox", { name: "o/pick" }).uncheck();
+    await page.getByRole("button", { name: "Save" }).click();
+
+    // The group empties out (no repo rows).
+    await expect(page.getByRole("button", { name: "o/pick" })).toHaveCount(0);
+  });
+
+  test("picker: keyboard — open settings, tab to a checkbox, toggle with space", async ({
+    page,
+  }) => {
+    await page.route("**/api/github/available", (route) =>
+      route.fulfill({ json: { repos: [{ slug: "o/kbd", private: false }] } }),
+    );
+    await page.route("**/api/github/config", (route) =>
+      route.fulfill({ json: { repos: [], source: "none" } }),
+    );
+    await repoList(page, []);
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "GitHub repo settings" }).click();
+    const checkbox = page.getByRole("checkbox", { name: "o/kbd" });
+    await expect(checkbox).toBeVisible();
+    await checkbox.focus();
+    await page.keyboard.press("Space");
+    await expect(checkbox).toBeChecked();
+  });
 });

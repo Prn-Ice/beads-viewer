@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { GITHUB_SLUG_RE, readConfig } from "./config";
 
 const GIT_TIMEOUT_MS = 120_000;
 const SYNC_TTL_MS = 60_000;
@@ -10,18 +11,53 @@ export interface GithubRepo {
   slug: string; // "owner/repo"
 }
 
-// Parse BEADS_GITHUB_REPOS: comma-separated "owner/repo" entries.
+// Parse a comma-separated list of "owner/repo" entries (the BEADS_GITHUB_REPOS
+// env var shape), dropping malformed entries and duplicates.
 export function parseGithubRepos(envValue: string | undefined): GithubRepo[] {
   if (!envValue) return [];
   const seen = new Set<string>();
   const repos: GithubRepo[] = [];
   for (const entry of envValue.split(",")) {
     const slug = entry.trim().replace(/\/+$/, "").replace(/\.git$/, "");
-    if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(slug) || seen.has(slug)) continue;
+    if (!GITHUB_SLUG_RE.test(slug) || seen.has(slug)) continue;
     seen.add(slug);
     repos.push({ slug });
   }
   return repos;
+}
+
+// Resolve the configured GitHub repos: the BEADS_GITHUB_REPOS env var wins
+// when set (explicit override); otherwise fall back to the local config file.
+// readConfig is called per invocation so edits take effect without a restart.
+export function configuredGithubRepos(): GithubRepo[] {
+  const env = process.env.BEADS_GITHUB_REPOS?.trim();
+  if (env) return parseGithubRepos(env);
+  return readConfig().githubRepos.map((slug) => ({ slug }));
+}
+
+// List the authenticated user's GitHub repos via gh. Used by the settings
+// panel; errors collapse to a friendly message (gh missing or not authed).
+// Note: gh repo list @me fails on some gh versions ("owner handle @me not
+// recognized"), so query without an owner — that lists the user's own repos.
+export async function listGhRepos(): Promise<{ slug: string; private: boolean }[]> {
+  const gh = process.env.GH_BIN ?? "gh";
+  try {
+    const out = await run(gh, [
+      "repo",
+      "list",
+      "--limit",
+      "200",
+      "--json",
+      "nameWithOwner,isPrivate",
+    ]);
+    const parsed = JSON.parse(out);
+    if (!Array.isArray(parsed)) throw new Error("unexpected gh output");
+    return parsed
+      .map((repo) => ({ slug: String(repo?.nameWithOwner ?? ""), private: Boolean(repo?.isPrivate) }))
+      .filter((repo) => GITHUB_SLUG_RE.test(repo.slug));
+  } catch {
+    throw new Error("gh not available or not authenticated");
+  }
 }
 
 function cacheRoot(): string {
@@ -204,7 +240,7 @@ async function ensureDatabase(dir: string, beadsDir: string, changed: boolean): 
 // inflight dedupe lets later per-repo requests join the in-flight syncs. gh
 // auth failure or a failing repo only logs a warning — refresh must never fail.
 export function forceSyncGithubRepos(): Promise<void> {
-  const repos = parseGithubRepos(process.env.BEADS_GITHUB_REPOS);
+  const repos = configuredGithubRepos();
   if (repos.length === 0) return Promise.resolve();
 
   return ghToken()
@@ -229,7 +265,7 @@ export function hasTrackableBeads(beadsDir: string): boolean {
 // read-only sweeps like the needs-you inbox so they never trigger a sync.
 export function listMaterializedGithubProjects(): { path: string; name: string }[] {
   const projects: { path: string; name: string }[] = [];
-  for (const repo of parseGithubRepos(process.env.BEADS_GITHUB_REPOS)) {
+  for (const repo of configuredGithubRepos()) {
     const beadsDir = join(cloneDir(repo), ".beads");
     if (existsSync(beadsDir) && hasDatabase(beadsDir)) {
       projects.push({ path: cloneDir(repo), name: repo.slug });
