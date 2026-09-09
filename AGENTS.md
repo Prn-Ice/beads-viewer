@@ -76,6 +76,7 @@ See [worker setup](docs/workers.md) for worktree preparation and test ports.
 
 - `src/lib/bd.ts` — spawns `bd --json`, parses output (all data access)
 - `src/lib/discovery.ts` — finds beads projects (cwd walk-up, registry, scan roots)
+- `src/lib/github.ts` — mirrors GitHub beads repos as sparse clones (auth via `gh`)
 - `src/lib/cache.ts` — tiny TTL cache for bd output
 - `src/app/api/*` — JSON endpoints; no DB, thin wrappers over `bd`
 - `src/app/page.tsx` + `src/components/*` — client UI (sidebar, board, drawer)
@@ -88,3 +89,19 @@ pauses polling in hidden tabs, and refreshes on return. These endpoints use a
 `bd` binary location is resolved via `BEADS_BIN` env (default: `bd` from
 PATH). Project discovery roots come from `BEADS_PROJECT_ROOTS` (comma
 separated, default: cwd, `~/Projects`, `~/Dotfiles`).
+
+Repos listed in `BEADS_GITHUB_REPOS` (comma separated `owner/repo`) are
+mirrored as shallow sparse clones of `.beads/` under `~/.cache/view-beads/github`
+(`BEADS_GITHUB_CACHE`), authenticated per-invocation via `gh auth token`
+(`GH_BIN` override) passed as a Basic `http.extraheader` (GitHub's git
+endpoint rejects Bearer; `GIT_TERMINAL_PROMPT=0` keeps git from ever
+prompting), re-fetched at most every 60s, and served per repo by
+`GET /api/github/repos/[slug]` (slugs come from `GET /api/github/repos`).
+Since git only syncs the JSONL exports, the clone gets a local database via
+`bd init --skip-agents --skip-hooks` + `bd import` on first sync, upserted
+whenever a re-fetch brings new commits. The clone is a strictly read-only
+mirror: the `sync.remote` line `bd init` wires back at the GitHub repo is
+stripped from its `config.yaml`, and nothing is ever pushed. `/api/projects`
+stays local-only so it never blocks on syncs; the dashboard loads repos
+sequentially into a GitHub sidebar group with per-repo loading rows. Repos
+without `.beads` or without any synced issue data are skipped.

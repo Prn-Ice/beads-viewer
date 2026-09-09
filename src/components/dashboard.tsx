@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronDownIcon, RotateCwIcon, SearchIcon } from "lucide-react";
+import { ChevronDownIcon, GlobeIcon, LoaderCircleIcon, RotateCwIcon, SearchIcon, TriangleAlertIcon } from "lucide-react";
 import { Board } from "@/components/board";
 import { IssueFilters } from "@/components/issue-filters";
 import { NeedsYou } from "@/components/needs-you";
@@ -41,13 +41,32 @@ import {
   type Scope,
   type ViewState,
 } from "@/lib/filters";
-import type { IssueListResponse, Project } from "@/lib/types";
+import type { GithubRepoResponse, IssueListResponse, Project } from "@/lib/types";
 
 const POLL_MS = 3_000;
 
 interface LoadedBoard {
   projectId: string;
   data: IssueListResponse;
+}
+
+// One entry per configured GitHub repo. Starts as "loading" and resolves to
+// "ok" (has beads), "empty" (no beads — hidden), or "error" (sync failed).
+interface GithubRepoEntry {
+  slug: string;
+  state: "loading" | "ok" | "empty" | "error";
+  project?: Project;
+  message?: string;
+}
+
+function toGithubEntry(slug: string, res: Response, data: unknown): GithubRepoEntry {
+  if (!res.ok) {
+    return { slug, state: "error", message: `HTTP ${res.status}` };
+  }
+  const body = data as GithubRepoResponse;
+  if (body.state === "ok") return { slug, state: "ok", project: body.project };
+  if (body.state === "empty") return { slug, state: "empty" };
+  return { slug, state: "error", message: body.message };
 }
 
 // Mobile-only replacement for the desktop SidebarTrigger + heading: one button
@@ -81,12 +100,94 @@ function ProjectPickerButton({ name }: { name: string | null }) {
   );
 }
 
+// Sidebar group for GitHub repos: spinner rows while a repo syncs, a warning
+// row when it fails, and a normal project row once its beads project is ready.
+// Repos without beads ("empty") are not shown.
+function GithubRepoGroup({
+  repos,
+  selectedId,
+  onSelect,
+}: {
+  repos: GithubRepoEntry[];
+  selectedId: string | null;
+  onSelect: (path: string) => void;
+}) {
+  const visible = repos.filter((entry) => entry.state !== "empty");
+  if (visible.length === 0) return null;
+  const syncing = repos.some((entry) => entry.state === "loading");
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel className="gap-1.5">
+        GitHub
+        {syncing && (
+          <LoaderCircleIcon className="size-3 animate-spin text-muted-foreground" aria-hidden />
+        )}
+      </SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {visible.map((entry) => {
+            if (entry.state === "loading") {
+              return (
+                <SidebarMenuItem key={entry.slug}>
+                  <div
+                    role="status"
+                    aria-label={`Syncing ${entry.slug} from GitHub`}
+                    className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground"
+                  >
+                    <LoaderCircleIcon className="size-3.5 shrink-0 animate-spin" aria-hidden />
+                    <span className="min-w-0 flex-1 truncate">{entry.slug}</span>
+                  </div>
+                </SidebarMenuItem>
+              );
+            }
+            if (entry.state === "error" || !entry.project) {
+              return (
+                <SidebarMenuItem key={entry.slug}>
+                  <div
+                    role="status"
+                    title={entry.message ?? "sync failed"}
+                    className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground"
+                  >
+                    <TriangleAlertIcon className="size-3.5 shrink-0 text-destructive" aria-hidden />
+                    <span className="min-w-0 flex-1 truncate">{entry.slug}</span>
+                    <span className="sr-only"> sync failed: {entry.message ?? "unknown error"}</span>
+                  </div>
+                </SidebarMenuItem>
+              );
+            }
+            const project = entry.project;
+            return (
+              <SidebarMenuItem key={entry.slug}>
+                <SidebarMenuButton
+                  isActive={project.path === selectedId}
+                  title={project.name}
+                  onClick={() => onSelect(project.path)}
+                >
+                  <GlobeIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">{project.name}</span>
+                  <SidebarMenuBadge className="static shrink-0">
+                    {project.summary?.open_issues ?? "?"}
+                  </SidebarMenuBadge>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+}
+
 export function Dashboard() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const [projects, setProjects] = useState<Project[] | null>(null);
+  const [githubRepos, setGithubRepos] = useState<GithubRepoEntry[]>([]);
+  // True once the first full GitHub sweep finished, so a deep link to a
+  // not-yet-loaded remote project does not flash the "not found" banner.
+  const [githubLoaded, setGithubLoaded] = useState(false);
   const [board, setBoard] = useState<LoadedBoard | null>(null);
   const [boardError, setBoardError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -122,13 +223,24 @@ export function Dashboard() {
 
   const { project: urlProject, issue: urlIssue } = readDeepLink(searchParams);
 
+  const githubProjects = githubRepos.flatMap((entry) =>
+    entry.state === "ok" && entry.project ? [entry.project] : [],
+  );
+  const allProjects = [...(projects ?? []), ...githubProjects];
+
   // Derive selection from the URL deep-link params so Back/Forward and direct
   // loads synchronize automatically. The default (or invalid) project is
   // selected without writing to the URL so it does not flood history; an
   // invalid project normalizes to the default without leaking the issue into it.
+  // While GitHub repos may still be loading, an unmatched link selects nothing
+  // yet rather than briefly falling back to the wrong project.
   const validProject =
-    urlProject && projects?.some((project) => project.path === urlProject) ? urlProject : null;
-  const selectedId = validProject ?? projects?.[0]?.path ?? null;
+    urlProject && allProjects.some((project) => project.path === urlProject) ? urlProject : null;
+  const awaitingLink =
+    urlProject != null && validProject === null && (projects === null || !githubLoaded);
+  const selectedId = awaitingLink
+    ? null
+    : (validProject ?? projects?.[0]?.path ?? githubProjects[0]?.path ?? null);
   const drawerIssueId = validProject ? urlIssue : null;
   const trailActive = trailProject === selectedId;
 
@@ -148,6 +260,61 @@ export function Dashboard() {
     return () => {
       cancelled = true;
     };
+  }, [reloadKey]);
+
+  // GitHub repos load one at a time so they stream into the sidebar as each
+  // clone syncs, and never block the local projects above. Poll ticks skip a
+  // sweep already in flight (`running` survives re-renders); `dead` is reset
+  // when a sweep starts because React StrictMode unmounts and remounts the
+  // component in dev, and the ref would otherwise stay dead forever.
+  const githubSweep = useRef({ running: false, dead: false });
+  useEffect(() => {
+    const sweep = githubSweep.current;
+    return () => {
+      sweep.dead = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const sweep = githubSweep.current;
+    if (sweep.running) return;
+    sweep.running = true;
+    sweep.dead = false;
+    (async () => {
+      try {
+        const listRes = await fetch("/api/github/repos");
+        if (!listRes.ok) throw new Error(`HTTP ${listRes.status}`);
+        const refs = (await listRes.json()) as { slug: string }[];
+        if (sweep.dead) return;
+        // Keep existing entries (no spinner flicker on refresh); new repos
+        // enter as loading, removed repos drop out.
+        setGithubRepos((current) =>
+          refs.map(
+            (ref) =>
+              current.find((entry) => entry.slug === ref.slug) ?? {
+                slug: ref.slug,
+                state: "loading" as const,
+              },
+          ),
+        );
+        for (const ref of refs) {
+          let entry: GithubRepoEntry;
+          try {
+            const res = await fetch(`/api/github/repos/${encodeURIComponent(ref.slug)}`);
+            entry = toGithubEntry(ref.slug, res, await res.json());
+          } catch {
+            entry = { slug: ref.slug, state: "error", message: "request failed" };
+          }
+          if (sweep.dead) return;
+          setGithubRepos((current) => current.map((e) => (e.slug === ref.slug ? entry : e)));
+        }
+      } catch {
+        // The repo list itself failed; keep previous entries and retry next tick.
+      } finally {
+        sweep.running = false;
+        if (!sweep.dead) setGithubLoaded(true);
+      }
+    })();
   }, [reloadKey]);
 
   useEffect(() => {
@@ -280,7 +447,7 @@ export function Dashboard() {
     router.push(`${withDeepLink(pathname, liveParams(), { project: selectedId, issue: null })}${window.location.hash}`, { scroll: false });
   }
 
-  const selectedProject = projects?.find((project) => project.path === selectedId) ?? null;
+  const selectedProject = allProjects.find((project) => project.path === selectedId) ?? null;
   const boardMatches = board !== null && board.projectId === selectedId;
   const visibleIssues = boardMatches ? applyFilters(board.data.issues, view) : [];
   // Facet choices come from the unfiltered scope issues plus any selected
@@ -308,7 +475,7 @@ export function Dashboard() {
                       <Skeleton className="mx-2 h-8 rounded-md" />
                     </SidebarMenuItem>
                   ))}
-                {projects?.length === 0 && (
+                {projects?.length === 0 && githubRepos.length === 0 && (
                   <p className="px-3 py-2 text-xs text-muted-foreground">
                     No projects found. Run <code className="font-mono">bd init</code> in a
                     project directory or set{" "}
@@ -332,6 +499,7 @@ export function Dashboard() {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+          <GithubRepoGroup repos={githubRepos} selectedId={selectedId} onSelect={selectProject} />
         </SidebarContent>
         <SidebarFooter className="max-h-[65vh] overflow-y-auto border-t p-4">
           <NeedsYou onSelect={(path, id) => openIssue(id, path)} />
@@ -435,7 +603,7 @@ export function Dashboard() {
             </div>
           </div>
         </header>
-        {projects !== null && urlProject && !validProject && (
+        {projects !== null && githubLoaded && urlProject && !validProject && (
           <p role="status" className="border-b px-4 py-2 text-sm text-muted-foreground">
             Linked project was not found. Select a project from the sidebar.
           </p>

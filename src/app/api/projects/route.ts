@@ -5,6 +5,8 @@ import type { Project, ProjectSummary } from "@/lib/types";
 
 const TTL_MS = 1_000;
 
+// Local projects only: instant, never blocked on GitHub syncs. Remote repos
+// load separately via /api/github/repos so they can stream in one by one.
 export async function GET() {
   const projects = discoverProjects(process.cwd());
 
@@ -16,9 +18,9 @@ export async function GET() {
           const data = await runBd(["status"], project.path);
           return (data as { summary: ProjectSummary }).summary;
         });
-        return { id, name: project.name, path: project.path, summary };
+        return { id, name: project.name, path: project.path, source: "local", summary };
       } catch {
-        return { id, name: project.name, path: project.path, summary: null };
+        return { id, name: project.name, path: project.path, source: "local", summary: null };
       }
     }),
   );

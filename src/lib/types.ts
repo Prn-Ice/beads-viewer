@@ -66,6 +66,7 @@ export interface Project {
   id: string;
   name: string;
   path: string;
+  source: "local" | "github";
   summary: ProjectSummary | null;
 }
 
@@ -73,3 +74,12 @@ export interface IssueListResponse {
   issues: BeadsIssue[];
   readyIds: string[];
 }
+
+export interface GithubRepoRef {
+  slug: string; // "owner/repo"
+}
+
+export type GithubRepoResponse =
+  | { slug: string; state: "ok"; project: Project }
+  | { slug: string; state: "empty" } // repo has no beads project
+  | { slug: string; state: "error"; message: string };
