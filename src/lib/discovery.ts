@@ -20,6 +20,21 @@ const SKIP_DIRS = new Set([
 export interface BeadsProject {
   path: string;
   name: string;
+  worktree: boolean;
+}
+
+// Git worktrees (and submodules) have a .git file pointing at the real gitdir
+// instead of a .git directory.
+function isGitWorktree(dir: string): boolean {
+  try {
+    return statSync(join(dir, ".git")).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function toProject(dir: string): BeadsProject {
+  return { path: dir, name: basename(dir), worktree: isGitWorktree(dir) };
 }
 
 export function hasBeadsProject(beadsDir: string): boolean {
@@ -37,7 +52,7 @@ function findCwdProject(cwd: string): BeadsProject | null {
   for (;;) {
     const beadsDir = join(dir, ".beads");
     if (existsSync(beadsDir) && hasBeadsProject(beadsDir)) {
-      return { path: dir, name: basename(dir) };
+      return toProject(dir);
     }
     const parent = dirname(dir);
     if (parent === dir) return null;
@@ -65,7 +80,7 @@ function registryProjects(beadsHome: string): BeadsProject[] {
     const dir = resolve(path);
     const beadsDir = join(dir, ".beads");
     if (existsSync(beadsDir) && hasBeadsProject(beadsDir)) {
-      projects.push({ path: dir, name: basename(dir) });
+      projects.push(toProject(dir));
     }
   }
   return projects;
@@ -90,7 +105,7 @@ function scanProjects(root: string, depth: number): BeadsProject[] {
     }
     const beadsDir = join(dir, ".beads");
     if (existsSync(beadsDir) && hasBeadsProject(beadsDir)) {
-      found.push({ path: dir, name: basename(dir) });
+      found.push(toProject(dir));
     } else if (depth < MAX_SCAN_DEPTH) {
       found.push(...scanProjects(dir, depth + 1));
     }

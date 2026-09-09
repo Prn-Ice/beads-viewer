@@ -75,7 +75,7 @@ See [worker setup](docs/workers.md) for worktree preparation and test ports.
 ## Architecture
 
 - `src/lib/bd.ts` — spawns `bd --json`, parses output (all data access)
-- `src/lib/discovery.ts` — finds beads projects (cwd walk-up, registry, scan roots)
+- `src/lib/discovery.ts` — finds beads projects (cwd walk-up, registry, scan roots) and flags git worktrees (`.git` is a file); the sidebar groups those under **Worktrees**
 - `src/lib/github.ts` — mirrors GitHub beads repos as sparse clones (auth via `gh`)
 - `src/lib/cache.ts` — tiny TTL cache for bd output
 - `src/app/api/*` — JSON endpoints; no DB, thin wrappers over `bd`

@@ -67,6 +67,8 @@ export interface Project {
   name: string;
   path: string;
   source: "local" | "github";
+  /** True when the checkout is a linked git worktree (local projects only). */
+  worktree?: boolean;
   summary: ProjectSummary | null;
 }
 

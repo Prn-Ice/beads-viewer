@@ -18,9 +18,9 @@ export async function GET() {
           const data = await runBd(["status"], project.path);
           return (data as { summary: ProjectSummary }).summary;
         });
-        return { id, name: project.name, path: project.path, source: "local", summary };
+        return { id, name: project.name, path: project.path, source: "local", worktree: project.worktree, summary };
       } catch {
-        return { id, name: project.name, path: project.path, source: "local", summary: null };
+        return { id, name: project.name, path: project.path, source: "local", worktree: project.worktree, summary: null };
       }
     }),
   );

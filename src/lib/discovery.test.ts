@@ -97,4 +97,19 @@ describe("discoverProjects", () => {
     const names = discoverProjects(tempDir).map((p) => p.name);
     expect(names).toEqual([...names].sort());
   });
+
+  it("marks checkouts whose .git is a file as worktrees", () => {
+    const roots = process.env.BEADS_PROJECT_ROOTS as string;
+    mkdirSync(roots, { recursive: true });
+    makeProject(roots, "plain");
+    const main = makeProject(roots, "main-checkout");
+    mkdirSync(join(main, ".git"));
+    const linked = makeProject(roots, "linked-worktree");
+    writeFileSync(join(linked, ".git"), "gitdir: /elsewhere/.git/worktrees/linked-worktree");
+
+    const byName = new Map(discoverProjects(tempDir).map((p) => [p.name, p]));
+    expect(byName.get("plain")?.worktree).toBe(false);
+    expect(byName.get("main-checkout")?.worktree).toBe(false);
+    expect(byName.get("linked-worktree")?.worktree).toBe(true);
+  });
 });

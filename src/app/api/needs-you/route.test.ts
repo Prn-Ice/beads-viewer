@@ -12,10 +12,10 @@ import { listMaterializedGithubProjects } from "@/lib/github";
 import type { NeedsYouResponse } from "@/lib/needs-you";
 
 const PROJECTS = [
-  { path: "/tmp/a", name: "alpha" },
-  { path: "/tmp/b", name: "beta" },
-  { path: "/tmp/c", name: "gamma" },
-  { path: "/tmp/d", name: "delta" },
+  { path: "/tmp/a", name: "alpha", worktree: false },
+  { path: "/tmp/b", name: "beta", worktree: false },
+  { path: "/tmp/c", name: "gamma", worktree: false },
+  { path: "/tmp/d", name: "delta", worktree: false },
 ];
 
 function humanIssue(id: string, overrides: Record<string, unknown> = {}) {
