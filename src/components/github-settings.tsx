@@ -11,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { SidebarGroupAction } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface AvailableRepo {
@@ -137,16 +138,15 @@ export function GithubSettings({ onSaved }: { onSaved: () => void }) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <button
+      <SidebarGroupAction
         type="button"
         aria-label="GitHub repo settings"
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => onOpenChange(true)}
-        className="rounded text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
-        <SettingsIcon className="size-3" />
-      </button>
+        <SettingsIcon aria-hidden />
+      </SidebarGroupAction>
       <SheetContent
         side="right"
         className="flex flex-col gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-sm"

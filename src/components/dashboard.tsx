@@ -147,14 +147,14 @@ function GithubRepoGroup({
   const syncing = repos.some((entry) => entry.state === "loading");
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className="gap-1.5">
+      <SidebarGroupLabel className="gap-1.5 pr-8">
         <GitGraphIcon className="size-3.5 text-muted-foreground" aria-hidden />
         GitHub
         {syncing && (
           <LoaderCircleIcon className="size-3 animate-spin text-muted-foreground" aria-hidden />
         )}
-        <GithubSettings onSaved={onSaved} />
       </SidebarGroupLabel>
+      <GithubSettings onSaved={onSaved} />
       {visible.length > 0 && (
         <SidebarGroupContent>
         <SidebarMenu>
