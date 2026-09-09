@@ -17,7 +17,7 @@ export function SessionChanges({ session, onReset, onSelect }: {
         <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden="true" />
       </summary>
       <div role="region" aria-label="Session changes" className="mt-2 flex min-w-0 flex-col gap-2">
-        <p className="text-xs text-muted-foreground">Current project, last observed changes. Not a complete activity history.</p>
+        <p className="text-xs text-muted-foreground">Changes seen this session for this project. Not a full activity history.</p>
         {session && <p className="text-xs text-muted-foreground">Baseline: {new Date(session.startedAt).toLocaleTimeString()}</p>}
         <ul className="max-h-[35vh] space-y-2 overflow-y-auto">
           {changes.map(({ issue, reasons }) => (
