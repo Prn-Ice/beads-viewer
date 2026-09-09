@@ -224,6 +224,20 @@ export function hasTrackableBeads(beadsDir: string): boolean {
   return hasDatabase(beadsDir) || existsSync(join(beadsDir, "issues.jsonl"));
 }
 
+// Remotes whose clones already exist on disk with a materialized database,
+// reported without any git/gh/bd work (pure filesystem check). Used by
+// read-only sweeps like the needs-you inbox so they never trigger a sync.
+export function listMaterializedGithubProjects(): { path: string; name: string }[] {
+  const projects: { path: string; name: string }[] = [];
+  for (const repo of parseGithubRepos(process.env.BEADS_GITHUB_REPOS)) {
+    const beadsDir = join(cloneDir(repo), ".beads");
+    if (existsSync(beadsDir) && hasDatabase(beadsDir)) {
+      projects.push({ path: cloneDir(repo), name: repo.slug });
+    }
+  }
+  return projects;
+}
+
 export type GithubLoadResult =
   | { state: "ok"; path: string; name: string }
   | { state: "empty" } // synced, but the repo has no trackable beads data

@@ -1,6 +1,7 @@
 import { runBd } from "@/lib/bd";
 import { cached } from "@/lib/cache";
 import { discoverProjects } from "@/lib/discovery";
+import { listMaterializedGithubProjects } from "@/lib/github";
 import {
   NEEDS_YOU_ARGS,
   normalizeCandidate,
@@ -32,7 +33,7 @@ async function mapWithLimit<T, R>(
 }
 
 export async function GET(): Promise<Response> {
-  const projects = discoverProjects(process.cwd());
+  const projects = [...discoverProjects(process.cwd()), ...listMaterializedGithubProjects()];
   const loaded = await mapWithLimit(projects, CONCURRENCY, async (project): Promise<NeedsYouProject> => {
     try {
       const issues = await cached<NeedsYouIssue[]>(`needs-you|${project.path}`, TTL_MS, async () => {

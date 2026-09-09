@@ -4,9 +4,11 @@ import { GET } from "./route";
 
 vi.mock("@/lib/bd", () => ({ runBd: vi.fn() }));
 vi.mock("@/lib/discovery", () => ({ discoverProjects: vi.fn() }));
+vi.mock("@/lib/github", () => ({ listMaterializedGithubProjects: vi.fn() }));
 
 import { runBd } from "@/lib/bd";
 import { discoverProjects } from "@/lib/discovery";
+import { listMaterializedGithubProjects } from "@/lib/github";
 import type { NeedsYouResponse } from "@/lib/needs-you";
 
 const PROJECTS = [
@@ -27,6 +29,7 @@ async function getProjects(): Promise<NeedsYouResponse["projects"]> {
 
 beforeEach(() => {
   vi.mocked(discoverProjects).mockReturnValue(PROJECTS);
+  vi.mocked(listMaterializedGithubProjects).mockReturnValue([]);
   vi.mocked(runBd).mockResolvedValue([]);
 });
 
@@ -119,5 +122,47 @@ describe("GET /api/needs-you", () => {
 
     const data = (await (await GET()).json()) as NeedsYouResponse;
     expect(data.projects).toEqual([]);
+  });
+
+  it("includes materialized GitHub remotes and queries them via bd", async () => {
+    vi.mocked(listMaterializedGithubProjects).mockReturnValue([
+      { path: "/tmp/remotes/o/gh", name: "o/gh" },
+    ]);
+    vi.mocked(runBd).mockResolvedValue([humanIssue("gh-1")]);
+
+    const projects = await getProjects();
+
+    expect(runBd).toHaveBeenCalledWith(
+      ["list", "--label", "human", "--ready", "--status", "open", "--limit", "0"],
+      "/tmp/remotes/o/gh",
+    );
+    const gh = projects.find((p) => p.name === "o/gh");
+    expect(gh?.issues.map((i) => i.id)).toEqual(["gh-1"]);
+    expect(gh?.error).toBeUndefined();
+  });
+
+  it("reports per-project errors for failing remote bd queries", async () => {
+    vi.mocked(listMaterializedGithubProjects).mockReturnValue([
+      { path: "/tmp/remotes/o/gh", name: "o/gh" },
+    ]);
+    vi.mocked(runBd).mockImplementation(async (_args, cwd) => {
+      if (cwd === "/tmp/remotes/o/gh") throw new Error("remote boom");
+      return [];
+    });
+
+    const projects = await getProjects();
+    const gh = projects.find((p) => p.name === "o/gh");
+    expect(gh?.error).toContain("remote boom");
+    expect(gh?.issues).toEqual([]);
+  });
+
+  it("queries nothing extra when no remotes are configured", async () => {
+    vi.mocked(listMaterializedGithubProjects).mockReturnValue([]);
+
+    await getProjects();
+
+    expect(runBd).toHaveBeenCalledTimes(PROJECTS.length);
+    const calls = vi.mocked(runBd).mock.calls.map(([, cwd]) => cwd);
+    expect(calls).not.toContain("/tmp/remotes/o/gh");
   });
 });

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   cloneDir,
   forceSyncGithubRepos,
+  listMaterializedGithubProjects,
   loadGithubProject,
   parseGithubRepos,
   syncGithubRepo,
@@ -102,6 +103,34 @@ describe("parseGithubRepos", () => {
   it("skips malformed entries and duplicates", () => {
     expect(parseGithubRepos("justname, a/b/c, a b/c, ok/fine, ok/fine")).toEqual([
       { slug: "ok/fine" },
+    ]);
+  });
+});
+
+describe("listMaterializedGithubProjects", () => {
+  it("returns nothing when no remotes are configured", () => {
+    process.env.BEADS_GITHUB_REPOS = "";
+    expect(listMaterializedGithubProjects()).toEqual([]);
+  });
+
+  it("reports only clones already materialized with a database", () => {
+    process.env.BEADS_GITHUB_REPOS = "o/r1, o/r2, o/r3";
+    // r1 has a full database; r2 only has an issues.jsonl export (not yet
+    // imported); r3 has no clone at all.
+    writeFiles(join(root, "cache", "o/r1/.beads"), { "embeddeddolt/placeholder": "" });
+    writeFiles(join(root, "cache", "o/r2/.beads"), { "issues.jsonl": '{"title":"t"}\n' });
+
+    expect(listMaterializedGithubProjects()).toEqual([
+      { path: join(root, "cache", "o/r1"), name: "o/r1" },
+    ]);
+  });
+
+  it("includes clones with a dolt directory", () => {
+    process.env.BEADS_GITHUB_REPOS = "o/d1";
+    writeFiles(join(root, "cache", "o/d1/.beads"), { "dolt/placeholder": "" });
+
+    expect(listMaterializedGithubProjects()).toEqual([
+      { path: join(root, "cache", "o/d1"), name: "o/d1" },
     ]);
   });
 });
