@@ -217,7 +217,7 @@ export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelect
                   {linkCopyState === "error" && "Copy failed. Check clipboard permissions and try again."}
                 </span>
               </div>
-              <SheetDescription>
+              <SheetDescription render={<div />}>
                 <div className="flex flex-wrap gap-2 pt-1">
                   <TypeBadge issueType={issue.issue_type} />
                   {issue.labels?.map((label) => (
