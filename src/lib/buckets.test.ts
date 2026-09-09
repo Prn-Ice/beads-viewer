@@ -61,4 +61,16 @@ describe("bucketIssues", () => {
       "none",
     ]);
   });
+
+  it("sorts closed issues by most recently closed, ignoring priority", () => {
+    const columns = bucketIssues(
+      [
+        issue("old-high", { status: "closed", priority: 0, closed_at: "2026-09-01T00:00:00Z" }),
+        issue("new-low", { status: "closed", priority: 4, closed_at: "2026-09-08T00:00:00Z" }),
+        issue("fallback", { status: "closed", closed_at: undefined, updated_at: "2026-09-05T00:00:00Z" }),
+      ],
+      [],
+    );
+    expect(columns.closed.map((i) => i.id)).toEqual(["new-low", "fallback", "old-high"]);
+  });
 });

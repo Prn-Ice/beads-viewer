@@ -17,6 +17,14 @@ export function sortIssues(issues: BeadsIssue[]): BeadsIssue[] {
   });
 }
 
+// Closed issues have no priority to act on; what matters is what happened
+// most recently, so they sort by close time (falling back to update time).
+export function sortClosedIssues(issues: BeadsIssue[]): BeadsIssue[] {
+  return [...issues].sort((a, b) =>
+    (b.closed_at ?? b.updated_at ?? "").localeCompare(a.closed_at ?? a.updated_at ?? ""),
+  );
+}
+
 export function bucketIssues(issues: BeadsIssue[], readyIds: string[]): BoardColumns {
   const ready = new Set(readyIds);
   const columns: BoardColumns = {
@@ -40,7 +48,7 @@ export function bucketIssues(issues: BeadsIssue[], readyIds: string[]): BoardCol
     }
   }
   for (const column of Object.keys(columns) as (keyof BoardColumns)[]) {
-    columns[column] = sortIssues(columns[column]);
+    columns[column] = column === "closed" ? sortClosedIssues(columns[column]) : sortIssues(columns[column]);
   }
   return columns;
 }
