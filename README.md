@@ -55,11 +55,10 @@ pre-dolt database) land under **Broken** with a warning marker.
 
 ### GitHub projects
 
-Show beads projects straight from GitHub — no local clone needed. Pick repos
-from the GitHub settings panel (the gear button in the sidebar's GitHub group),
+Pick repos from the GitHub settings panel (the gear button in the sidebar's GitHub group),
 which lists your `gh` repos and persists the selection to
 `~/.config/view-beads/config.json` (override with `VIEW_BEADS_CONFIG`). The
-change applies on the next request — no server restart. Alternatively set
+change applies on the next request. Alternatively set
 `BEADS_GITHUB_REPOS=owner/repo,owner/repo`; the env var wins when set.
 
 Each repo is mirrored as a shallow, sparse clone (just the `.beads` directory)
