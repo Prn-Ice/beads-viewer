@@ -4,7 +4,13 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { loadGithubProject, parseGithubRepos, syncGithubRepo } from "./github";
+import {
+  cloneDir,
+  forceSyncGithubRepos,
+  loadGithubProject,
+  parseGithubRepos,
+  syncGithubRepo,
+} from "./github";
 
 const FAKE_GH = fileURLToPath(new URL("../../tests/fixtures/fake-gh.mjs", import.meta.url));
 
@@ -169,6 +175,40 @@ describe("loadGithubProject", { timeout: 30_000 }, () => {
     const sync = await syncGithubRepo({ slug: "o/r5" }, "test-token", { force: true });
     expect(sync.changed).toBe(false);
     expect(readFileSync(join(sync.dir, ".beads", "issues.jsonl"), "utf8")).toBe('{"title":"v1"}\n');
+  });
+});
+
+describe("forceSyncGithubRepos", { timeout: 30_000 }, () => {
+  it("re-fetches a new commit before the TTL would expire", async () => {
+    process.env.BEADS_GITHUB_REPOS = "o/r6";
+    const work = makeRemote("o/r6", { ".beads/issues.jsonl": '{"title":"v1"}\n' });
+    await loadGithubProject({ slug: "o/r6" }); // clones + materializes
+
+    push(work, { ".beads/issues.jsonl": '{"title":"v2"}\n' }, "update issues");
+    await forceSyncGithubRepos();
+
+    // forceSyncGithubRepos is fire-and-forget, so wait for the in-flight sync
+    // to land the new commit instead of trusting its resolved promise.
+    const dir = cloneDir({ slug: "o/r6" });
+    const deadline = Date.now() + 15_000;
+    let content = "";
+    while (Date.now() < deadline) {
+      content = readFileSync(join(dir, ".beads", "issues.jsonl"), "utf8");
+      if (content === '{"title":"v2"}\n') break;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    expect(content).toBe('{"title":"v2"}\n');
+  });
+
+  it("does not call git when no repos are configured", async () => {
+    delete process.env.BEADS_GITHUB_REPOS;
+    await expect(forceSyncGithubRepos()).resolves.toBeUndefined();
+  });
+
+  it("succeeds (logging a warning) when gh auth fails", async () => {
+    process.env.BEADS_GITHUB_REPOS = "o/r7";
+    process.env.GH_BIN = join(root, "no-such-gh");
+    await expect(forceSyncGithubRepos()).resolves.toBeUndefined();
   });
 });
 

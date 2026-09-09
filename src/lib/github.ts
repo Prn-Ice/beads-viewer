@@ -199,6 +199,27 @@ async function ensureDatabase(dir: string, beadsDir: string, changed: boolean): 
   }
 }
 
+// Kick off a forced re-sync of every configured repo. Fire-and-forget: the
+// syncs are started (not awaited) so the caller (refresh) returns fast, and the
+// inflight dedupe lets later per-repo requests join the in-flight syncs. gh
+// auth failure or a failing repo only logs a warning — refresh must never fail.
+export function forceSyncGithubRepos(): Promise<void> {
+  const repos = parseGithubRepos(process.env.BEADS_GITHUB_REPOS);
+  if (repos.length === 0) return Promise.resolve();
+
+  return ghToken()
+    .then((token) => {
+      for (const repo of repos) {
+        syncGithubRepo(repo, token, { force: true }).catch((err) => {
+          console.warn(`force sync failed for ${repo.slug}: ${err instanceof Error ? err.message : err}`);
+        });
+      }
+    })
+    .catch((err) => {
+      console.warn(`force sync skipped, gh auth failed: ${err instanceof Error ? err.message : err}`);
+    });
+}
+
 export function hasTrackableBeads(beadsDir: string): boolean {
   return hasDatabase(beadsDir) || existsSync(join(beadsDir, "issues.jsonl"));
 }
