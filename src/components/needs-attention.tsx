@@ -47,7 +47,7 @@ export function NeedsAttention({ issues, onSelect }: NeedsAttentionProps) {
         </span>
       </summary>
       <div className="max-h-[40vh] overflow-y-auto px-4 pb-3">
-        <p className="mb-2 text-xs text-muted-foreground">Suggestions for the current project and search, not explicit requests for human input.</p>
+        <p className="mb-2 text-xs text-muted-foreground">Stale urgent or long-stuck issues on this board</p>
         <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <label className="flex items-center gap-1">
             Urgent (P0/P1) stale after
