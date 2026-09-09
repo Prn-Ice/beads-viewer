@@ -61,10 +61,12 @@ test.describe("github projects", () => {
     await repoLoads(page, (slug) => {
       if (!requestedAt[slug]) requestedAt[slug] = Date.now();
       if (slug === "o/slow") {
-        return { delayMs: 1200, body: { slug, state: "ok", project: { ...GH_PROJECT, name: "o/slow" } } };
+        // Generous delays: under a parallel e2e run the browser can stall long
+        // enough that a short window closes before the assertions below poll.
+        return { delayMs: 2500, body: { slug, state: "ok", project: { ...GH_PROJECT, name: "o/slow" } } };
       }
       if (slug === "o/fast") {
-        return { delayMs: 800, body: { slug, state: "ok", project: { ...GH_PROJECT, id: "x", path: "/cache/gh/o/fast", name: "o/fast" } } };
+        return { delayMs: 1500, body: { slug, state: "ok", project: { ...GH_PROJECT, id: "x", path: "/cache/gh/o/fast", name: "o/fast" } } };
       }
       return undefined;
     });
