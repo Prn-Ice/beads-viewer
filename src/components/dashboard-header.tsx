@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { ChevronDownIcon, RotateCwIcon, SearchIcon } from "lucide-react";
 import { IssueFilters } from "@/components/issue-filters";
+import { ShareButton } from "@/components/share-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,6 +138,7 @@ export function DashboardHeader({
         <Button variant="outline" size="icon" onClick={onRefresh} aria-label="Refresh">
           <RotateCwIcon className="size-4" />
         </Button>
+        <ShareButton />
         <ThemeSwitcher />
       </div>
       <div className="mt-1 flex items-center gap-2 lg:hidden">

@@ -16,6 +16,7 @@
           nodejs_24
           git
           playwright
+          cloudflared
         ];
         PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright.browsers}";
       };

@@ -89,6 +89,17 @@ repo syncs and a warning row if it fails.
 
 Requires `git` and an authenticated `gh` CLI (`gh auth login`).
 
+### Sharing
+
+The Share button in the header opens a panel that starts a
+[Cloudflare tunnel](https://developers.cloudflare.com/cloudflared/) and
+shows a public link, so co-workers and managers can watch the dashboard live
+from their own machines. Pick a quick tunnel (no setup, ad-hoc link), or a
+named/token tunnel for a stable, faster URL — the choice persists to the
+local config file. Your machine stays the server — stop sharing or shut the
+server down and the link dies. Requires `cloudflared` on your `PATH` (or
+`CLOUDFLARED_BIN`). See [docs/share.md](docs/share.md).
+
 View Beads is an independent dashboard, not an official Beads product.
 See [asset sources and licenses](public/brand/README.md) for branding credits.
 
@@ -105,8 +116,11 @@ npm run build     # production build (.next/standalone)
 
 Environment variables: `BEADS_BIN` (path to `bd`), `BEADS_HOME` (where
 `registry.json` lives), `BEADS_PROJECT_ROOTS`, `BEADS_GITHUB_REPOS`,
-`BEADS_GITHUB_CACHE`, `GH_BIN` (path to `gh`), `VIEW_BEADS_CONFIG` (config file
-path), `VIEW_BEADS_SERVER` (built
+`BEADS_GITHUB_CACHE`, `GH_BIN` (path to `gh`), `CLOUDFLARED_BIN` (path to
+`cloudflared` for sharing), `CLOUDFLARED_TUNNEL_TOKEN` or
+`CLOUDFLARED_TUNNEL_NAME` plus `CLOUDFLARED_SHARE_URL` (use a proper tunnel
+instead of a quick one, see [docs/share.md](docs/share.md)),
+`VIEW_BEADS_CONFIG` (config file path), `VIEW_BEADS_SERVER` (built
 `server.js`), `VIEW_BEADS_NO_OPEN`.
 
 ## Publishing

@@ -358,6 +358,8 @@ test.describe("issue filters", () => {
     await page.goto("/");
     const trigger = page.getByRole("button", { name: /^Filters/, includeHidden: true });
     await expect(trigger).toBeInViewport({ ratio: 1 });
+    // The sheet body only overflows once facet choices arrive with the board.
+    await expect(card(page, /Fix crash on startup/)).toBeVisible();
 
     await trigger.click();
     const dialog = page.getByRole("dialog", { name: "Filters" });

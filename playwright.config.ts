@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 import { defineConfig } from "@playwright/test";
 
@@ -23,6 +24,9 @@ export default defineConfig({
       BEADS_BIN: path.join(fixtureDir, "fake-bd.mjs"),
       BEADS_HOME: fixtureDir,
       BEADS_PROJECT_ROOTS: path.join(fixtureDir, "projects"),
+      CLOUDFLARED_BIN: path.join(fixtureDir, "fake-cloudflared.mjs"),
+      // Keep settings writes (share panel, github panel) out of the real config.
+      VIEW_BEADS_CONFIG: path.join(os.tmpdir(), "view-beads-e2e-config.json"),
       PORT: String(port),
       HOSTNAME: "127.0.0.1",
     },

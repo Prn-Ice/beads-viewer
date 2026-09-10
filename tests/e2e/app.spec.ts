@@ -4,8 +4,11 @@ test.describe("board journey", () => {
   test("shows projects, a board with columns, and issue details", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("button", { name: "alpha" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "beta" })).toBeVisible();
+    // Scope to the sidebar: issue cards also contain "alpha"/"beta" in their
+    // accessible names once the board loads.
+    const sidebar = page.locator('[data-slot="sidebar"]');
+    await expect(sidebar.getByRole("button", { name: "alpha" })).toBeVisible();
+    await expect(sidebar.getByRole("button", { name: "beta" })).toBeVisible();
 
     for (const column of ["Ready", "In Progress", "Blocked", "Backlog"]) {
       await expect(page.getByRole("heading", { name: column, exact: true })).toBeVisible();
