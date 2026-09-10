@@ -11,15 +11,21 @@ list too). Clicking a row's title opens the same issue drawer.
 
 ## Desktop
 
-Each row shows: **ID, Title, Priority, Status, Type, Assignee, Age** (from
-`created_at`). Reused badges render priority, status, and type; age uses the
-same relative-time formatting as the board cards.
+Each row shows: **ID, Title, Priority, Status, Type, Parent, Assignee, Age**
+(from `created_at`). Reused badges render priority, status, and type; age uses
+the same relative-time formatting as the board cards.
+
+The **Parent** column shows a clickable "Child of {parent-id}" chip for issues
+with a parent and a dash for top-level issues. Clicking the chip opens the
+parent in the issue drawer. It sorts by parent id with parentless issues last
+in both directions.
 
 ## Mobile
 
 Below `md` (768px) the list renders compact **title-first rows**: a 14px medium
 title on top with a muted metadata line underneath showing the ID (mono),
-priority, status, and age. Long titles clamp to two lines and long IDs wrap, so
+priority, status, age, and a non-interactive "Child of {parent-id}" chip when
+the issue has a parent. Long titles clamp to two lines and long IDs wrap, so
 rows never force horizontal scrolling. The ID, status, and priority stay visible
 at 360/390px widths.
 
@@ -44,9 +50,12 @@ with column headers pinned; the toolbar and mobile sort controls remain visible.
 ## Files
 
 - `src/lib/list-sort.ts` — pure sorting logic + unit tests (`list-sort.test.ts`)
+- `src/lib/hierarchy.ts` — per-parent child counts + unit tests
 - `src/components/issue-list.tsx` — table (desktop) / row (mobile) view component
+- `src/components/parent-link.tsx` — the clickable "Child of" chip
+- `src/components/issue-card.tsx` — board card with parent chip and child count
 - `src/components/board.tsx` — owns the Board/List toggle and sort state
-- `tests/e2e/list-view.spec.ts` — Playwright coverage
+- `tests/e2e/list-view.spec.ts`, `tests/e2e/parent-child.spec.ts` — Playwright coverage
 
 ## Screenshots
 
