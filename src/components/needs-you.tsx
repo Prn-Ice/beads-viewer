@@ -8,15 +8,17 @@ import { totalNeedsYou, type NeedsYouResponse } from "@/lib/needs-you";
 
 interface NeedsYouProps {
   onSelect: (projectPath: string, issueId: string) => void;
+  onOpenChange?: (open: boolean) => void;
 }
 
 // Read-only cross-project inbox: open issues that explicitly ask for human
 // input (human label + open + bd --ready). Loaded once on first open, then
 // only on manual refresh — no background polling while hidden or open.
-export function NeedsYou({ onSelect }: NeedsYouProps) {
+export function NeedsYou({ onSelect, onOpenChange }: NeedsYouProps) {
   const [data, setData] = useState<NeedsYouResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
   const hasLoaded = useRef(false);
   const request = useRef<AbortController | null>(null);
 
@@ -45,7 +47,11 @@ export function NeedsYou({ onSelect }: NeedsYouProps) {
   }
 
   function onToggle(event: SyntheticEvent<HTMLDetailsElement>) {
-    if (event.target === event.currentTarget && event.currentTarget.open && !hasLoaded.current) {
+    if (event.target !== event.currentTarget) return;
+    const nextOpen = event.currentTarget.open;
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+    if (nextOpen && !hasLoaded.current) {
       hasLoaded.current = true;
       load();
     }
@@ -57,7 +63,7 @@ export function NeedsYou({ onSelect }: NeedsYouProps) {
   const countLabel = error ? "!" : failedProjects.length ? (count ? `${count}+` : "?") : String(count);
 
   return (
-    <details aria-label="Needs you" onToggle={onToggle} className="group min-w-0">
+    <details aria-label="Needs you" open={open} onToggle={onToggle} className="group min-w-0">
       <summary className="flex cursor-pointer list-none items-center gap-2 rounded py-1 text-xs text-muted-foreground select-none hover:text-foreground [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-ring">
         <InboxIcon className="size-3.5 shrink-0" aria-hidden="true" />
         <span className="min-w-0 flex-1">Needs you</span>

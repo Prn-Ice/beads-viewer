@@ -82,6 +82,25 @@ test.describe("needs you inbox", () => {
     }
   });
 
+  test("widens the desktop sidebar while open and restores it on close", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const control: Control = {
+      projects: [{ path: ALPHA, name: "alpha", issues: [issue("alpha-1", "Fix crash on startup")] }],
+      requests: 0,
+      fail: false,
+    };
+    await stubNeedsYou(page, control);
+    await page.goto("/");
+
+    const container = page.locator('[data-slot="sidebar-container"]');
+    await expect(container).toHaveCSS("width", "256px");
+    await expand(page);
+    await expect(container).toHaveCSS("width", "384px");
+    await summary(page).click();
+    await expect(panel(page)).not.toHaveAttribute("open", "");
+    await expect(container).toHaveCSS("width", "256px");
+  });
+
   test("does not poll while open and only refreshes manually", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     const control: Control = {

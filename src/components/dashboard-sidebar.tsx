@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState, type CSSProperties } from "react";
 import { GitBranchIcon, GitGraphIcon, LoaderCircleIcon, TriangleAlertIcon } from "lucide-react";
 import { GithubSettings } from "@/components/github-settings";
 import { NeedsYou } from "@/components/needs-you";
@@ -30,6 +31,10 @@ export interface GithubRepoEntry {
   project?: Project;
   message?: string;
 }
+
+// Desktop sidebar width while the Needs You panel is open, so issue rows get
+// room without widening the sidebar for everyone all the time.
+const NEEDS_YOU_SIDEBAR_WIDTH = "24rem";
 
 export function githubEntryFromResponse(slug: string, res: Response, data: unknown): GithubRepoEntry {
   if (!res.ok) {
@@ -180,9 +185,16 @@ export function DashboardSidebar({
   const broken = (projects ?? []).filter((project) => project.summary === null);
   const worktrees = (projects ?? []).filter((project) => project.worktree && project.summary !== null);
   const healthy = (projects ?? []).filter((project) => !project.worktree && project.summary !== null);
+  const [needsYouOpen, setNeedsYouOpen] = useState(false);
 
   return (
-    <Sidebar>
+    <Sidebar
+      style={
+        needsYouOpen
+          ? ({ "--sidebar-width": NEEDS_YOU_SIDEBAR_WIDTH } as CSSProperties)
+          : undefined
+      }
+    >
       <SidebarHeader className="gap-2 border-b p-4">
         <Image src="/brand/beads.svg" alt="Beads" width={28} height={28} unoptimized className="shrink-0 self-start" />
         <span className="text-xs text-muted-foreground">Local issue dashboard</span>
@@ -273,7 +285,7 @@ export function DashboardSidebar({
         />
       </SidebarContent>
       <SidebarFooter className="max-h-[65vh] overflow-y-auto border-t p-4">
-        <NeedsYou onSelect={onNeedsYouSelect} />
+        <NeedsYou onSelect={onNeedsYouSelect} onOpenChange={setNeedsYouOpen} />
         <SessionChanges
           session={session}
           onSelect={onSessionSelect}

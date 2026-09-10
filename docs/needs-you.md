@@ -33,7 +33,10 @@ issues. Those actions remain separate future scope.
 
 The inbox is on-demand: nothing is fetched until you first open it, and it is
 **not** part of the board polling loop. The summary shows no count before the
-first load, so an unloaded panel can never be mistaken for zero. After the
+first load, so an unloaded panel can never be mistaken for zero. Opening the
+panel widens the desktop sidebar to 24rem while it stays open so issue rows
+get room; the sidebar returns to its normal width when the panel closes.
+After the
 first open the panel keeps its snapshot; **Refresh** clears the data cache and
 loads a fresh snapshot. The snapshot timestamp is shown next to the button.
 The 5-second server cache and a bounded fetch across projects (three at a
