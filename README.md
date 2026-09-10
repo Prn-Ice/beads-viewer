@@ -11,19 +11,25 @@ Built with Next.js, shadcn/ui and Tailwind. All data comes from the `bd` CLI.
 ## Install
 
 ```sh
-# npm (Node >= 20.9 required)
+# npm (Node >= 20.9)
 npm install -g view-beads
 
-# or from this flake
+# or run it without installing
+npx view-beads
+```
+
+Requires `bd` from [beads](https://github.com/steveyegge/beads) on your
+`PATH` (or point `BEADS_BIN` at it). The npm package ships the built
+standalone server, so it has no runtime npm dependencies.
+
+Alternatively, from this flake (pulls in `bd` automatically):
+
+```sh
 nix run github:Prn-Ice/beads-viewer
 
 # or add it to your home-manager packages
 inputs.view-beads.packages.x86_64-linux.default
 ```
-
-Requires `bd` (the `beads` package) — the nix package pulls it in
-automatically. The npm package ships the built standalone server, so it has no
-runtime npm dependencies.
 
 ## Usage
 
