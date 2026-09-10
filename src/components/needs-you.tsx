@@ -108,11 +108,6 @@ export function NeedsYou({ onSelect, onOpenChange }: NeedsYouProps) {
             {error}{data ? " Showing the last result." : ""}
           </p>
         )}
-        {data && failedProjects.length > 0 && (
-          <p role="status" className="text-xs text-destructive">
-            Could not check {failedProjects.length} project{failedProjects.length === 1 ? "" : "s"}.
-          </p>
-        )}
         {data && !loading && !error && visibleProjects.length === 0 && failedProjects.length === 0 && (
           <p role="status" className="text-xs text-muted-foreground">
             No issues need you right now.
@@ -144,6 +139,11 @@ export function NeedsYou({ onSelect, onOpenChange }: NeedsYouProps) {
               </ul>
             </section>
           ))}
+        {data && failedProjects.length > 0 && (
+          <p role="status" className="text-xs text-destructive">
+            Could not check {failedProjects.length} project{failedProjects.length === 1 ? "" : "s"}.
+          </p>
+        )}
         {data &&
           failedProjects.map((project) => (
             <p key={project.path} className="text-xs text-destructive [overflow-wrap:anywhere]">

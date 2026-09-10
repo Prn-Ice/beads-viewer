@@ -136,6 +136,7 @@ test.describe("needs you inbox", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     const control: Control = {
       projects: [
+        { path: ALPHA, name: "alpha", issues: [issue("alpha-1", "Fix crash on startup")] },
         { path: BETA, name: "beta", issues: [], error: "bd list exited 2: boom" },
       ],
       requests: 0,
@@ -145,10 +146,17 @@ test.describe("needs you inbox", () => {
     await page.goto("/");
     await expand(page);
     const region = inbox(page);
-    await expect(region.getByRole("status")).toContainText("Could not check 1 project");
+    const failure = region.getByRole("status").filter({ hasText: "Could not check 1 project" });
+    await expect(failure).toBeVisible();
     await expect(region).toContainText("beta: bd list exited 2: boom");
     await expect(region.getByText("No issues need you right now.")).toHaveCount(0);
-    await expect(summary(page)).toContainText("?");
+    await expect(summary(page)).toContainText("1+");
+
+    // The failure summary lists under the loaded projects, never above them.
+    const valid = region.getByRole("region", { name: "alpha needs you" });
+    const validBox = await valid.boundingBox();
+    const failureBox = await failure.boundingBox();
+    expect(validBox!.y).toBeLessThan(failureBox!.y);
 
     control.projects = [];
     await page.getByRole("button", { name: "Refresh needs you" }).click();
