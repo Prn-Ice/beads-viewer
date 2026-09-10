@@ -1,6 +1,6 @@
 {
   "name": "view-beads",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local web dashboard for beads (bd) issue trackers. Type view-beads in any folder and get a link to open in your browser.",
   "license": "MIT",
   "repository": {
