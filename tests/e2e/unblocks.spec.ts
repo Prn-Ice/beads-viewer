@@ -42,7 +42,7 @@ const analysis: UnblocksAnalysis = {
 
 async function stubApi(page: Page) {
   await page.route("**/api/projects/*/issues?scope=open", (route) => {
-    const body: IssueListResponse = { issues: [root], readyIds: [] };
+    const body: IssueListResponse = { issues: [root], readyIds: [], childCounts: {} };
     return route.fulfill({ json: body });
   });
   await page.route("**/api/projects/*/issues/*/comments", (route) => route.fulfill({ json: [] }));

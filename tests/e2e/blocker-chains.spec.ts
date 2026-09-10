@@ -94,7 +94,7 @@ test("limits distinct issue requests even for a wide root", async ({ page }) => 
 test("board polling leaves expanded chains loaded", async ({ page }) => {
   let version = 0;
   await page.route("**/issues?scope=open", (route) => route.fulfill({ json: {
-    issues: [{ ...data["alpha-1"], title: `Fix crash version ${++version}` }], readyIds: ["alpha-1"],
+    issues: [{ ...data["alpha-1"], title: `Fix crash version ${++version}` }], readyIds: ["alpha-1"], childCounts: {},
   } }));
   const requests = await setup(page);
   await page.locator("summary", { hasText: "Explore blocker chains" }).click();

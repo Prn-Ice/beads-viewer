@@ -58,7 +58,7 @@ async function stubEpic(page: import("@playwright/test").Page, options: StubOpti
 
   for (const scope of ["open", "all"]) {
     await page.route(`**/api/projects/*/issues?scope=${scope}`, async (route) => {
-      const body: IssueListResponse = { issues: board, readyIds: [] };
+      const body: IssueListResponse = { issues: board, readyIds: [], childCounts: {} };
       await route.fulfill({ json: body });
     });
   }

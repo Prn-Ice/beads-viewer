@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { runBd } from "@/lib/bd";
 import { cached } from "@/lib/cache";
+import { countChildren } from "@/lib/hierarchy";
 import type { BeadsIssue, IssueListResponse } from "@/lib/types";
 
 const TTL_MS = 1_000;
@@ -49,9 +50,13 @@ export async function GET(
       runBd(args, path),
       runBd(["list", "--limit", "0", "--ready"], path),
     ]);
+    // Child counts come from the all-status list so they stay complete when the
+    // open scope hides closed children. Reuse the payload for the all scope.
+    const allRaw = scope === "all" ? issuesRaw : await runBd(["list", "--limit", "0", "--all"], path);
     return {
       issues: (issuesRaw as BeadsIssue[]).map(lightIssue),
       readyIds: (readyRaw as BeadsIssue[]).map((issue) => issue.id),
+      childCounts: countChildren(allRaw as BeadsIssue[]),
     };
   });
 

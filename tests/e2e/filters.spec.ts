@@ -23,7 +23,7 @@ function makeIssue(overrides: Partial<BeadsIssue>): BeadsIssue {
 
 async function stubIssues(page: import("@playwright/test").Page, issues: BeadsIssue[], scope = "open") {
   await page.route(`**/api/projects/*/issues?scope=${scope}`, async (route) => {
-    const body: IssueListResponse = { issues, readyIds: issues.map((i) => i.id) };
+    const body: IssueListResponse = { issues, readyIds: issues.map((i) => i.id), childCounts: {} };
     await route.fulfill({ json: body });
   });
 }

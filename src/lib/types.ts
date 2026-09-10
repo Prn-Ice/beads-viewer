@@ -75,6 +75,8 @@ export interface Project {
 export interface IssueListResponse {
   issues: BeadsIssue[];
   readyIds: string[];
+  /** Direct children per parent id, counted across every status. */
+  childCounts: Record<string, number>;
 }
 
 export interface GithubRepoRef {

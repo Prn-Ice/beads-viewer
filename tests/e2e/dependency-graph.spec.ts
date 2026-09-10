@@ -250,7 +250,7 @@ test("a root epic scopes to itself", async ({ page }) => {
   const requests: string[] = [];
   for (const scope of ["open", "all"]) {
     await page.route(`**/issues?scope=${scope}`, (route) =>
-      route.fulfill({ json: { issues: [epicRoot], readyIds: [] } }),
+      route.fulfill({ json: { issues: [epicRoot], readyIds: [], childCounts: {} } }),
     );
   }
   await stubRelationships(page, { "epic-root": epicRoot }, requests);
@@ -317,7 +317,7 @@ test("board polling never triggers per-issue graph requests", async ({ page }) =
   await expect.poll(() => requests).toEqual(["alpha-1"]);
 
   await page.route("**/issues?scope=open", (route) =>
-    route.fulfill({ json: { issues: [alpha1], readyIds: ["alpha-1"] } }),
+    route.fulfill({ json: { issues: [alpha1], readyIds: ["alpha-1"], childCounts: {} } }),
   );
   await expect(expandNodeButton(drawer, "d").first()).toBeVisible();
   await page.waitForTimeout(4000);

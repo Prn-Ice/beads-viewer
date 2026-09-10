@@ -125,6 +125,23 @@ describe("sortIssuesByKey", () => {
     ];
     expect(ids(sortIssuesByKey(noAge, "age", "asc"))).toEqual(["has-age", "no-age"]);
     expect(ids(sortIssuesByKey(noAge, "age", "desc"))).toEqual(["has-age", "no-age"]);
+
+    const noParent = [
+      issue("has-parent", { parent: "epic" }),
+      issue("no-parent", { parent: undefined }),
+    ];
+    expect(ids(sortIssuesByKey(noParent, "parent", "asc"))).toEqual(["has-parent", "no-parent"]);
+    expect(ids(sortIssuesByKey(noParent, "parent", "desc"))).toEqual(["has-parent", "no-parent"]);
+  });
+
+  it("sorts the parent column by parent id", () => {
+    const mixed = [
+      issue("b", { parent: "zzz" }),
+      issue("c", { parent: "aaa" }),
+      issue("a", { parent: undefined }),
+    ];
+    expect(ids(sortIssuesByKey(mixed, "parent", "asc"))).toEqual(["c", "b", "a"]);
+    expect(ids(sortIssuesByKey(mixed, "parent", "desc"))).toEqual(["b", "c", "a"]);
   });
 
   it("breaks ties with issue ID even when the primary value is missing", () => {

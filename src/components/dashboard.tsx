@@ -367,6 +367,7 @@ export function Dashboard() {
           <Board
             issues={visibleIssues}
             readyIds={board.data.readyIds}
+            childCounts={board.data.childCounts}
             includeClosed={view.scope === "all"}
             onSelect={openIssue}
           />

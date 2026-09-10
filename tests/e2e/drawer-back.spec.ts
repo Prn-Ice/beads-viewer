@@ -43,7 +43,7 @@ const chain = [relA, relB, relC];
 
 async function stubRelationships(page: import("@playwright/test").Page) {
   await page.route("**/api/projects/*/issues?scope=open", async (route) => {
-    const body: IssueListResponse = { issues: chain, readyIds: [] };
+    const body: IssueListResponse = { issues: chain, readyIds: [], childCounts: {} };
     await route.fulfill({ json: body });
   });
   for (const issue of chain) {

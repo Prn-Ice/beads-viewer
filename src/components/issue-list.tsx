@@ -2,6 +2,7 @@
 
 import { ArrowDownIcon, ArrowUpIcon, ArrowUpDownIcon } from "lucide-react";
 import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/badges";
+import { ParentLink } from "@/components/parent-link";
 import { relativeTime } from "@/lib/format";
 import {
   SORT_COLUMNS,
@@ -97,6 +98,13 @@ export function IssueList({ issues, sortKey, sortDir, onSort, onSelect }: IssueL
                 <td className="px-3 py-2 whitespace-nowrap">
                   <TypeBadge issueType={issue.issue_type} />
                 </td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {issue.parent ? (
+                    <ParentLink parentId={issue.parent} onSelect={onSelect} />
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
                 <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
                   {issue.assignee || "unassigned"}
                 </td>
@@ -123,6 +131,7 @@ export function IssueList({ issues, sortKey, sortDir, onSort, onSelect }: IssueL
                 <span className="font-mono break-all">{issue.id}</span>
                 <PriorityBadge priority={issue.priority} />
                 <StatusBadge status={issue.status} />
+                {issue.parent && <ParentLink parentId={issue.parent} />}
                 {issue.created_at && Number.isFinite(Date.parse(issue.created_at)) && (
                   <span className="ml-auto whitespace-nowrap">{relativeTime(issue.created_at)}</span>
                 )}

@@ -29,7 +29,7 @@ function sortableIssues(): BeadsIssue[] {
 
 async function stubIssues(page: import("@playwright/test").Page, issues: BeadsIssue[], scope = "open") {
   await page.route(`**/api/projects/*/issues?scope=${scope}`, async (route) => {
-    const body: IssueListResponse = { issues, readyIds: issues.map((i) => i.id) };
+    const body: IssueListResponse = { issues, readyIds: issues.map((i) => i.id), childCounts: {} };
     await route.fulfill({ json: body });
   });
 }
@@ -113,7 +113,7 @@ test.describe("list view", () => {
     // Needs attention stays available in list view.
     await expect(page.locator("summary", { hasText: "Needs attention" })).toBeVisible();
     // All columns render.
-    for (const col of ["ID", "Title", "Priority", "Status", "Type", "Assignee", "Age"]) {
+    for (const col of ["ID", "Title", "Priority", "Status", "Type", "Parent", "Assignee", "Age"]) {
       await expect(columnHeader(page, col)).toBeVisible();
     }
 
@@ -345,7 +345,7 @@ test.describe("list view", () => {
         i.id === "alpha-1" ? { ...i, title: `Fix crash on startup ${version}` } : i,
       );
       await route.fulfill({
-        json: { issues, readyIds: fixture.ready.map((r) => r.id) } satisfies IssueListResponse,
+        json: { issues, readyIds: fixture.ready.map((r) => r.id), childCounts: {} } satisfies IssueListResponse,
       });
     });
     await page.goto("/");

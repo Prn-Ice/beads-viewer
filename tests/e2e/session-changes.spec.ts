@@ -21,7 +21,7 @@ async function setup(page: Page) {
     const url = new URL(route.request().url());
     const project = decodeURIComponent(url.pathname.split("/")[3]).endsWith("/beta") ? "beta" : "alpha";
     const issues = control[project].filter((item) => url.searchParams.get("scope") === "all" || item.status !== "closed");
-    await route.fulfill({ json: { issues, readyIds: issues.map((item) => item.id) } });
+    await route.fulfill({ json: { issues, readyIds: issues.map((item) => item.id), childCounts: {} } });
   });
   await page.route("**/issues/session-a", (route) => route.fulfill({ json: control.alpha[0] }));
   await page.goto("/");

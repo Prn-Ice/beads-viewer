@@ -20,13 +20,14 @@ import type { BeadsIssue } from "@/lib/types";
 interface BoardProps {
   issues: BeadsIssue[];
   readyIds: string[];
+  childCounts: Record<string, number>;
   includeClosed: boolean;
   onSelect: (id: string) => void;
 }
 
 type ViewMode = "board" | "list";
 
-export function Board({ issues, readyIds, includeClosed, onSelect }: BoardProps) {
+export function Board({ issues, readyIds, childCounts, includeClosed, onSelect }: BoardProps) {
   const [view, setView] = useState<ViewMode>("board");
   const [sortKey, setSortKey] = useState<SortKey>("age");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -136,7 +137,12 @@ export function Board({ issues, readyIds, includeClosed, onSelect }: BoardProps)
                     </div>
                   )}
                   {columns[key].map((issue) => (
-                    <IssueCard key={issue.id} issue={issue} onSelect={onSelect} />
+                    <IssueCard
+                      key={issue.id}
+                      issue={issue}
+                      childCount={childCounts[issue.id] ?? 0}
+                      onSelect={onSelect}
+                    />
                   ))}
                 </div>
               </section>

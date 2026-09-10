@@ -6,6 +6,7 @@ export type SortKey =
   | "priority"
   | "status"
   | "type"
+  | "parent"
   | "assignee"
   | "age";
 export type SortDir = "asc" | "desc";
@@ -16,6 +17,7 @@ export const SORT_COLUMNS: { key: SortKey; label: string }[] = [
   { key: "priority", label: "Priority" },
   { key: "status", label: "Status" },
   { key: "type", label: "Type" },
+  { key: "parent", label: "Parent" },
   { key: "assignee", label: "Assignee" },
   { key: "age", label: "Age" },
 ];
@@ -35,6 +37,8 @@ function sortValue(issue: BeadsIssue, key: SortKey): number | string | null {
       return issue.status;
     case "type":
       return issue.issue_type || null;
+    case "parent":
+      return issue.parent || null;
     case "assignee":
       return issue.assignee || null;
     case "age": {

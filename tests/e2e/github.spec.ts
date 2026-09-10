@@ -74,7 +74,7 @@ test.describe("github projects", () => {
     await page.goto("/");
 
     // Local projects show up right away, before any remote repo has synced.
-    await expect(page.getByRole("button", { name: "alpha" })).toBeVisible();
+    await expect(page.locator('[data-slot="sidebar"]').getByRole("button", { name: /alpha/ })).toBeVisible();
     await expect(page.getByRole("status", { name: "Syncing o/slow from GitHub" })).toBeVisible();
     await expect(page.getByRole("status", { name: "Syncing o/fast from GitHub" })).toBeVisible();
 
@@ -117,14 +117,14 @@ test.describe("github projects", () => {
         : undefined,
     );
     await page.route(`**/api/projects/${encodeURIComponent(GH_PATH)}/issues*`, (route) =>
-      route.fulfill({ json: { issues: [GH_ISSUE], readyIds: [] } }),
+      route.fulfill({ json: { issues: [GH_ISSUE], readyIds: [], childCounts: {} } }),
     );
 
     await page.goto(`/?project=${encodeURIComponent(GH_PATH)}`);
     const banner = page.getByText("Linked project was not found");
 
     // Locals load first; the banner must not flash while GitHub is syncing.
-    await expect(page.getByRole("button", { name: "alpha" })).toBeVisible();
+    await expect(page.locator('[data-slot="sidebar"]').getByRole("button", { name: /alpha/ })).toBeVisible();
     await expect(banner).toHaveCount(0);
 
     await expect(page.getByRole("button", { name: "o/deep" })).toBeVisible();

@@ -39,7 +39,7 @@ function attentionIssues(): BeadsIssue[] {
 
 async function stubIssues(page: import("@playwright/test").Page, issues: BeadsIssue[]) {
   await page.route("**/api/projects/*/issues?scope=open", async (route) => {
-    const body: IssueListResponse = { issues, readyIds: issues.map((i) => i.id) };
+    const body: IssueListResponse = { issues, readyIds: issues.map((i) => i.id), childCounts: {} };
     await route.fulfill({ json: body });
   });
 }

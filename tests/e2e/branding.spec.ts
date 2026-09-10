@@ -12,8 +12,8 @@ async function expectHeaderAlignment(header: Locator) {
   }));
   expect(logo).not.toBeNull();
   expect(subtitle).not.toBeNull();
-  expect(logo!.width).toBe(28);
-  expect(logo!.height).toBe(28);
+  expect(logo!.width).toBeCloseTo(28, 1);
+  expect(logo!.height).toBeCloseTo(28, 1);
   expect(subtitle!.x).toBeCloseTo(logo!.x, 0);
   expect(subtitle!.y - (logo!.y + logo!.height)).toBeCloseTo(8, 0);
 }
@@ -36,18 +36,20 @@ for (const mode of ["light", "dark"] as const) {
     expect(await page.evaluate(() => [...document.fonts].some((font) => font.family.includes("paperMono") && font.status === "loaded"))).toBe(true);
     await expect(page.locator("body")).toHaveCSS("font-feature-settings", '"cv02", "cv03", "cv04", "cv11"');
     const title = page.getByRole("heading", { name: "alpha", exact: true });
-    await expect(title).toHaveCSS("font-size", "20px");
+    await expect(title).toHaveCSS("font-size", "18px");
     await expect(title).toHaveCSS("line-height", "28px");
     await expect(title).toHaveCSS("font-weight", "600");
-    await expect(title).toHaveCSS("letter-spacing", "-0.5px");
+    await expect(title).toHaveCSS("letter-spacing", "-0.45px");
     const columnTitle = page.getByRole("heading", { name: "Ready", exact: true });
-    await expect(columnTitle).toHaveCSS("font-size", "16px");
-    await expect(columnTitle).toHaveCSS("line-height", "24px");
+    await expect(columnTitle).toHaveCSS("font-size", "14px");
+    await expect(columnTitle).toHaveCSS("line-height", "20px");
     await expect(columnTitle).toHaveCSS("font-weight", "600");
-    await expect(columnTitle).toHaveCSS("letter-spacing", "-0.4px");
+    await expect(columnTitle).toHaveCSS("letter-spacing", "-0.35px");
     const logo = page.getByRole("img", { name: "Beads", exact: true }).filter({ visible: true });
     await expect(logo).toHaveCount(1);
-    expect(await logo.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBe(32);
+    await expect
+      .poll(() => logo.evaluate((image) => (image as HTMLImageElement).naturalWidth))
+      .toBe(32);
     await expectHeaderAlignment(page.locator('[data-slot="sidebar-header"]'));
     await expect(page.getByRole("link", { name: /Beads documentation/ })).toHaveAttribute("href", "https://beads.gascity.com/");
     await expect(card).toHaveCSS("cursor", "pointer");

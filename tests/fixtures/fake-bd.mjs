@@ -16,10 +16,14 @@ switch (command) {
   case "status":
     print(data.status);
     break;
-  case "list":
+  case "list": {
     if (rest.includes("--ready")) print(data.ready);
-    else print(data.list);
+    else if (rest.includes("--parent")) {
+      const parent = rest[rest.indexOf("--parent") + 1];
+      print(data.list.filter((issue) => issue.parent === parent));
+    } else print(data.list);
     break;
+  }
   case "show": {
     const issue = data.show[rest[0]];
     if (!issue) {
