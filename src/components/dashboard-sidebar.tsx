@@ -248,7 +248,7 @@ export function DashboardSidebar({
                   <SidebarMenuItem key={project.id}>
                     <SidebarMenuButton
                       isActive={project.path === selectedId}
-                      title={`${project.name} — bd status failed for this project`}
+                      title={`${project.name} — bd could not read this project`}
                       onClick={() => onSelect(project.path)}
                     >
                       <span className="min-w-0 flex-1 truncate text-muted-foreground">
@@ -256,7 +256,7 @@ export function DashboardSidebar({
                       </span>
                       <TriangleAlertIcon
                         className="size-3.5 shrink-0 text-destructive"
-                        aria-label="bd status failed for this project"
+                        aria-label="bd could not read this project"
                       />
                     </SidebarMenuButton>
                   </SidebarMenuItem>

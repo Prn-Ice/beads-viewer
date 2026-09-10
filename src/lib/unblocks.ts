@@ -173,11 +173,11 @@ export function analyzeUnblocks(
   const cycleCount = explain?.summary?.cycle_count ?? 0;
   let projectNote: string | undefined;
   if (explain === null) {
-    projectNote = explainNote ?? "bd ready --explain is unavailable; estimates need manual verification.";
+    projectNote = explainNote ?? "Readiness data isn't available; estimates need a manual check.";
   } else if (cycleCount > 0) {
-    projectNote = `The project has ${cycleCount} dependency cycle(s); estimates need manual verification.`;
+    projectNote = `The dependency graph has ${cycleCount} cycle${cycleCount === 1 ? "" : "s"}, so estimates can't be trusted; check manually.`;
   } else if (!ACTIVE_ROOT_STATUSES.has(root.status ?? "")) {
-    projectNote = `Root issue status is ${root.status ?? "unknown"}; completing it is not actionable right now.`;
+    projectNote = `This issue is ${root.status ?? "unknown"}, so finishing it can't unblock anything right now.`;
   }
 
   const candidates: UnblockCandidate[] = list.map((dep) =>
@@ -205,38 +205,38 @@ function judgeCandidate(
   const base = { id: dep.id, title: dep.title ?? record?.title, status: dep.status ?? record?.status };
   if (projectNote) return { ...base, verdict: "verify", reason: projectNote };
   if (!record) {
-    return { ...base, verdict: "verify", reason: "Full issue record could not be loaded." };
+    return { ...base, verdict: "verify", reason: "Couldn't load this issue's details; check manually." };
   }
   if (explain === null) {
-    return { ...base, verdict: "verify", reason: "bd ready --explain is unavailable; verify manually." };
+    return { ...base, verdict: "verify", reason: "Readiness data isn't available; check manually." };
   }
 
   const blockedItem = explain.blocked?.find((item) => item.id === dep.id);
   const isReady = explain.ready?.some((item) => item.id === dep.id);
   if (blockedItem && isReady) {
     // A candidate in both lists means the snapshots disagree; never estimate.
-    return { ...base, verdict: "verify", reason: "bd ready --explain reports this issue as both ready and blocked." };
+    return { ...base, verdict: "verify", reason: "bd reports this issue as both ready and blocked; check manually." };
   }
   if (!blockedItem) {
     if (isReady) {
-      return { ...base, verdict: "not-likely", reason: "Already ready — completing this issue adds nothing." };
+      return { ...base, verdict: "not-likely", reason: "Already ready." };
     }
     if (record.status !== "open") {
-      return { ...base, verdict: "not-likely", reason: `Already ${record.status} — not open work.` };
+      return { ...base, verdict: "not-likely", reason: `Already ${record.status}.` };
     }
-    return { ...base, verdict: "verify", reason: "Not reported as blocked by bd ready --explain." };
+    return { ...base, verdict: "verify", reason: "bd doesn't report it as blocked; check manually." };
   }
 
   const blockers = blockedItem.blocked_by ?? [];
   const count = blockedItem.blocked_by_count;
   if (count === undefined || blockers.length === 0) {
-    return { ...base, verdict: "verify", reason: "Blocker details are missing from bd ready --explain." };
+    return { ...base, verdict: "verify", reason: "bd doesn't say what's blocking it; check manually." };
   }
   const others = blockers.filter((blocker) => blocker.id !== root.id);
   const rootBlocker = blockers.find((blocker) => blocker.id === root.id);
   if (!rootBlocker) {
     if (others.length === 0) {
-      return { ...base, verdict: "verify", reason: "Blocked per bd ready --explain, but no blocker is listed." };
+      return { ...base, verdict: "verify", reason: "bd says it's blocked but doesn't list the blockers; check manually." };
     }
     return {
       ...base,
@@ -246,12 +246,12 @@ function judgeCandidate(
     };
   }
   if (count !== blockers.length) {
-    return { ...base, verdict: "verify", reason: "bd ready --explain blocker details are inconsistent." };
+    return { ...base, verdict: "verify", reason: "bd's blocker details don't add up; check manually." };
   }
   // The explain snapshot must agree with the loaded root record about the
   // root's own status; a flip between the two cached calls means stale data.
   if (rootBlocker.status !== undefined && rootBlocker.status !== root.status) {
-    return { ...base, verdict: "verify", reason: `Root status is ${root.status ?? "unknown"} in its record but ${rootBlocker.status} in the readiness snapshot.` };
+    return { ...base, verdict: "verify", reason: `This issue's status doesn't match between bd's data sources (${root.status ?? "unknown"} vs ${rootBlocker.status}); check manually.` };
   }
   if (count > 1) {
     return { ...base, verdict: "not-likely", reason: `Also blocked by ${listBlockers(others)}.`, remainingBlockers: others };
@@ -265,16 +265,16 @@ function positiveChecks(record: BeadsIssue, root: BeadsIssue, now: number): Pick
     return { verdict: "not-likely", reason: `Already ${record.status} — not open work.` };
   }
   if (record.pinned || record.is_template || record.ephemeral || record.no_history) {
-    return { verdict: "verify", reason: "Issue is pinned, a template, or ephemeral — not ordinary work." };
+    return { verdict: "verify", reason: "This is a pinned, template, or ephemeral issue, not regular work; check manually." };
   }
   if (record.issue_type && !ORDINARY_WORK_TYPES.has(record.issue_type)) {
-    return { verdict: "verify", reason: `Issue type ${record.issue_type} is not ordinary work.` };
+    return { verdict: "verify", reason: `Its type (${record.issue_type}) isn't regular work; check manually.` };
   }
   const deferUntil = record.defer_until;
   if (typeof deferUntil === "string" && deferUntil !== "") {
     const when = new Date(deferUntil).getTime();
     if (!Number.isFinite(when)) {
-      return { verdict: "verify", reason: "defer_until is not a valid timestamp." };
+      return { verdict: "verify", reason: "It has an invalid defer date; check manually." };
     }
     if (when > now) {
       return { verdict: "not-likely", reason: `Deferred until ${deferUntil}.` };
@@ -284,38 +284,38 @@ function positiveChecks(record: BeadsIssue, root: BeadsIssue, now: number): Pick
   const depLinks = issueLinks(record, "dependencies");
   const count = record.dependency_count;
   if (count === undefined) {
-    return { verdict: "verify", reason: "Dependency counts are missing from the candidate record." };
+    return { verdict: "verify", reason: "Its dependency list is missing; check manually." };
   }
   if (depLinks.length < count) {
-    return { verdict: "verify", reason: `Only ${depLinks.length} of ${count} dependencies were loaded.` };
+    return { verdict: "verify", reason: `Only ${depLinks.length} of ${count} dependencies could be loaded; check manually.` };
   }
   if (depLinks.length > count) {
-    return { verdict: "verify", reason: "Dependency count disagrees with the loaded dependencies." };
+    return { verdict: "verify", reason: "Its dependency count doesn't match the loaded list; check manually." };
   }
 
   const rootEdge = depLinks.find((link) => link.id === root.id);
   if (!rootEdge) {
-    return { verdict: "verify", reason: "The root's blocking edge is not visible from the candidate record." };
+    return { verdict: "verify", reason: "Its record doesn't show this issue blocking it; check manually." };
   }
   if (rootEdge.type !== "blocks") {
-    return { verdict: "verify", reason: `Root relationship type is ${rootEdge.type}, not blocks.` };
+    return { verdict: "verify", reason: `Its link to this issue is ${rootEdge.type}, not a blocking link; check manually.` };
   }
 
   for (const link of depLinks) {
     if (link.id === root.id) continue;
     if (link.type === "blocks") {
       if (link.status !== "closed" && link.status !== "pinned") {
-        return { verdict: "verify", reason: `Another blocks dependency (${link.id}) is ${link.status ?? "unknown status"}.` };
+        return { verdict: "verify", reason: `Also blocked by ${link.id} (${link.status ?? "unknown status"}).` };
       }
       continue;
     }
     if (PURE_ASSOCIATION_TYPES.has(link.type)) continue;
     if (link.type === "parent-child") {
-      return { verdict: "verify", reason: `Parent/child relationship to ${link.id} needs verification.` };
+      return { verdict: "verify", reason: `Linked to ${link.id} as parent/child; check manually.` };
     }
-    return { verdict: "verify", reason: `Relationship type ${link.type} needs verification.` };
+    return { verdict: "verify", reason: `Linked to ${link.id} as ${link.type}; check manually.` };
   }
-  return { verdict: "likely", reason: "Likely ready after completion." };
+  return { verdict: "likely", reason: "Would become ready." };
 }
 
 function listBlockers(blockers: ExplainBlocker[]): string {

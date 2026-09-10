@@ -143,7 +143,7 @@ describe("unblocks endpoint", () => {
     const res = await GET(new Request("http://test"), params());
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.projectNote).toContain("unsupported shape");
+    expect(body.projectNote).toContain("unexpected format");
     expect(body.candidates[0].verdict).toBe("verify");
   });
 

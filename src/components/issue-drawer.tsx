@@ -64,7 +64,7 @@ function DependencyList({
               onClick={() => id && onSelectIssue(id)}
               className="flex items-center gap-2 rounded-md border p-2 text-left text-sm hover:bg-accent/40"
             >
-              <span className="max-w-[35%] shrink-0 truncate font-mono text-xs text-muted-foreground">{id ?? "Unresolved reference"}</span>
+              <span className="max-w-[35%] shrink-0 truncate font-mono text-xs text-muted-foreground">{id ?? "Unknown issue"}</span>
               <span className="flex-1 truncate">{dep.title ?? "—"}</span>
               {dep.status && <StatusBadge status={dep.status} />}
             </button>
@@ -102,7 +102,7 @@ export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelect
 
     fetch(issueUrl)
       .then((res) => {
-        if (!res.ok) throw new Error(`failed to load issue (HTTP ${res.status})`);
+        if (!res.ok) throw new Error(`Couldn't load this issue (HTTP ${res.status})`);
         return res.json();
       })
       .then((data: BeadsIssue) => {
@@ -281,7 +281,7 @@ export function IssueDrawer({ projectId, projectPath, issueId, onClose, onSelect
                 <DependencyList title="Depends on" items={dependencies} onSelectIssue={onSelectIssue} />
                 <DependencyList title="Required by" items={dependents} onSelectIssue={onSelectIssue} />
                 {dependencies.length === 0 && dependents.length === 0 && (
-                  <p className="text-sm text-muted-foreground">{issue.dependency_count > 0 || issue.dependent_count > 0 ? "Expand blocker chains to load relationship details." : "No dependencies."}</p>
+                  <p className="text-sm text-muted-foreground">{issue.dependency_count > 0 || issue.dependent_count > 0 ? "Open \"Explore blocker chains\" to load these links." : "No dependencies."}</p>
                 )}
               </TabsContent>
             </Tabs>

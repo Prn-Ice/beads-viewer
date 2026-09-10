@@ -31,10 +31,10 @@ export function NeedsYou({ onSelect }: NeedsYouProps) {
     try {
       if (fresh) {
         const refresh = await fetch("/api/refresh", { method: "POST", signal: controller.signal });
-        if (!refresh.ok) throw new Error("Could not refresh the data cache");
+        if (!refresh.ok) throw new Error("Couldn't refresh the data");
       }
       const res = await fetch("/api/needs-you", { signal: controller.signal });
-      if (!res.ok) throw new Error(`failed to load needs you (HTTP ${res.status})`);
+      if (!res.ok) throw new Error(`Couldn't load the needs-you list (HTTP ${res.status})`);
       setData((await res.json()) as NeedsYouResponse);
     } catch (err) {
       if (!controller.signal.aborted) setError(err instanceof Error ? err.message : String(err));
@@ -62,7 +62,7 @@ export function NeedsYou({ onSelect }: NeedsYouProps) {
         <InboxIcon className="size-3.5 shrink-0" aria-hidden="true" />
         <span className="min-w-0 flex-1">Needs you</span>
         {(count !== null || error) && (
-          <span aria-label={error ? "Snapshot refresh failed" : failedProjects.length ? "Incomplete count" : undefined} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground tabular-nums">
+          <span aria-label={error ? "Refresh failed" : failedProjects.length ? "Count may be incomplete" : undefined} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground tabular-nums">
             {countLabel}
           </span>
         )}
@@ -70,14 +70,14 @@ export function NeedsYou({ onSelect }: NeedsYouProps) {
       </summary>
       <div role="region" aria-label="Needs you" className="mt-2 flex max-h-[45vh] min-w-0 flex-col gap-2 overflow-y-auto pr-1">
         <p className="text-xs text-muted-foreground">
-          Open issues labelled <code className="font-mono">human</code> and ready
-          per <code className="font-mono">bd</code>, across all discovered projects. Checked once
-          on open; refresh manually.
+          Issues labelled <code className="font-mono">human</code> and ready to
+          start, from all your projects. Loaded when you open this; use Refresh
+          to update.
         </p>
         <div className="flex items-center gap-2">
           {data && (
             <span className="text-xs text-muted-foreground">
-              Snapshot {new Date(data.fetchedAt).toLocaleTimeString()}
+              As of {new Date(data.fetchedAt).toLocaleTimeString()}
             </span>
           )}
           <Button
@@ -94,18 +94,17 @@ export function NeedsYou({ onSelect }: NeedsYouProps) {
 
         {loading && (
           <p role="status" className="text-xs text-muted-foreground">
-            {data ? "Refreshing snapshot..." : "Checking projects..."}
+            {data ? "Refreshing..." : "Checking projects..."}
           </p>
         )}
         {error && (
           <p role="status" className="text-xs text-destructive [overflow-wrap:anywhere]">
-            {error}{data ? ". Showing the previous snapshot." : ""}
+            {error}{data ? " Showing the last result." : ""}
           </p>
         )}
         {data && failedProjects.length > 0 && (
           <p role="status" className="text-xs text-destructive">
-            {failedProjects.length} project{failedProjects.length === 1 ? "" : "s"} could not be
-            checked.
+            Could not check {failedProjects.length} project{failedProjects.length === 1 ? "" : "s"}.
           </p>
         )}
         {data && !loading && !error && visibleProjects.length === 0 && failedProjects.length === 0 && (

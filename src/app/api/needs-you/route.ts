@@ -38,7 +38,7 @@ export async function GET(): Promise<Response> {
     try {
       const issues = await cached<NeedsYouIssue[]>(`needs-you|${project.path}`, TTL_MS, async () => {
         const raw = await runBd(NEEDS_YOU_ARGS, project.path);
-        if (!Array.isArray(raw)) throw new Error("Unexpected bd response; project could not be checked");
+        if (!Array.isArray(raw)) throw new Error("Unexpected bd output");
         return raw
           .map((entry) => normalizeCandidate(entry))
           .filter((issue): issue is NeedsYouIssue => issue !== null);

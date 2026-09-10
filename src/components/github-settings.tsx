@@ -88,7 +88,7 @@ export function GithubSettings({ onSaved }: { onSaved: () => void }) {
         });
         setSelected(config.repos);
       } catch {
-        setState({ status: "error", message: "failed to load settings" });
+        setState({ status: "error", message: "Couldn't load the repo list" });
       }
     })();
   }
@@ -128,7 +128,7 @@ export function GithubSettings({ onSaved }: { onSaved: () => void }) {
       onSaved();
       setOpen(false);
     } catch {
-      setError("failed to save");
+      setError("Couldn't save your changes");
     } finally {
       setSaving(false);
     }

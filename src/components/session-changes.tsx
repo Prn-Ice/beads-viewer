@@ -18,7 +18,7 @@ export function SessionChanges({ session, onReset, onSelect }: {
       </summary>
       <div role="region" aria-label="Session changes" className="mt-2 flex min-w-0 flex-col gap-2">
         <p className="text-xs text-muted-foreground">Changes seen this session for this project. Not a full activity history.</p>
-        {session && <p className="text-xs text-muted-foreground">Baseline: {new Date(session.startedAt).toLocaleTimeString()}</p>}
+        {session && <p className="text-xs text-muted-foreground">Changes since {new Date(session.startedAt).toLocaleTimeString()}</p>}
         <ul className="max-h-[35vh] space-y-2 overflow-y-auto">
           {changes.map(({ issue, reasons }) => (
             <li key={issue.id}>
@@ -29,8 +29,8 @@ export function SessionChanges({ session, onReset, onSelect }: {
             </li>
           ))}
         </ul>
-        {changes.length === 0 && <p className="text-xs text-muted-foreground">No observed changes.</p>}
-        <Button size="sm" variant="outline" onClick={onReset} disabled={!session}>Reset baseline</Button>
+        {changes.length === 0 && <p className="text-xs text-muted-foreground">No changes seen.</p>}
+        <Button size="sm" variant="outline" onClick={onReset} disabled={!session}>Reset</Button>
       </div>
     </details>
   );

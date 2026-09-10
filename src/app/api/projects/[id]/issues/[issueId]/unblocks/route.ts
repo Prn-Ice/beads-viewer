@@ -52,11 +52,11 @@ export async function GET(
     if (parsed) {
       explain = parsed;
     } else {
-      explainNote = "bd ready --explain returned an unsupported shape; estimates need manual verification.";
+      explainNote = "Readiness data came back in an unexpected format; estimates need a manual check.";
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    explainNote = `bd ready --explain failed (${message}); estimates need manual verification.`;
+    explainNote = `Couldn't load readiness data (${message}); estimates need a manual check.`;
   }
 
   // Full candidate records in one batch show (bd 1.2.2 accepts multiple ids

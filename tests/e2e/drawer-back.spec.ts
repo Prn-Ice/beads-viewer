@@ -276,7 +276,7 @@ test.describe("drawer back trail", () => {
     const drawer = await openIssueFromBoard(page, "Issue A");
     await openDependenciesTab(drawer);
     await relationshipButton(drawer, "rel-b").click();
-    await expect(drawer.getByText(/failed to load issue/)).toBeVisible();
+    await expect(drawer.getByText(/Couldn.t load this issue/)).toBeVisible();
     await backButton(drawer).click();
     await expect(drawer.getByRole("heading", { name: "Issue A" })).toBeVisible();
   });

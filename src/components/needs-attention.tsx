@@ -23,10 +23,10 @@ function clampDays(raw: string, fallback: number): number {
 
 function reasonText(reason: AttentionReason): string {
   const rule =
-    reason.rule === "urgent" ? "urgent (P0/P1)" : "possibly stalled (in progress)";
-  return `Inactive ${Math.floor(reason.inactiveDays)} days since ${formatDate(
+    reason.rule === "urgent" ? "urgent issues (P0/P1)" : "in-progress issues";
+  return `Quiet for ${Math.floor(reason.inactiveDays)} days (since ${formatDate(
     reason.timestamp,
-  )} — ${rule}, threshold ${reason.thresholdDays} days`;
+  )}) — ${rule} are flagged after ${reason.thresholdDays} days`;
 }
 
 export function NeedsAttention({ issues, onSelect }: NeedsAttentionProps) {
@@ -47,10 +47,10 @@ export function NeedsAttention({ issues, onSelect }: NeedsAttentionProps) {
         </span>
       </summary>
       <div className="max-h-[40vh] overflow-y-auto px-4 pb-3">
-        <p className="mb-2 text-xs text-muted-foreground">Stale urgent or long-stuck issues on this board</p>
+        <p className="mb-2 text-xs text-muted-foreground">Urgent issues that went quiet, or in-progress work that is stuck.</p>
         <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <label className="flex items-center gap-1">
-            Urgent (P0/P1) stale after
+            Urgent issues (P0/P1) are flagged after
             <input
               type="number"
               min={1}
@@ -64,7 +64,7 @@ export function NeedsAttention({ issues, onSelect }: NeedsAttentionProps) {
             days
           </label>
           <label className="flex items-center gap-1">
-            In progress stalled after
+            In-progress issues are flagged after
             <input
               type="number"
               min={1}
@@ -77,7 +77,7 @@ export function NeedsAttention({ issues, onSelect }: NeedsAttentionProps) {
             />
             days
           </label>
-          <span>Thresholds apply to this session only.</span>
+          <span>These limits are not saved.</span>
         </div>
         {items.length === 0 && (
           <p className="py-1 text-xs text-muted-foreground">No issues need attention.</p>

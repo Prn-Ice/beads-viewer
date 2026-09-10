@@ -64,9 +64,9 @@ test.describe("needs attention panel", () => {
 
     // Default thresholds flag urgent stale and stalled issues with reasons.
     await expect(panelRow(page, /P0 stalled long/)).toContainText(/urgent/);
-    await expect(panelRow(page, /P0 stalled long/)).toContainText(/possibly stalled/);
+    await expect(panelRow(page, /P0 stalled long/)).toContainText(/in-progress issues/);
     await expect(panelRow(page, /P1 stale/)).toContainText(/urgent/);
-    await expect(panelRow(page, /Stalled task/)).toContainText(/possibly stalled/);
+    await expect(panelRow(page, /Stalled task/)).toContainText(/in-progress issues/);
 
     // Fresh, closed, future-deferred, and missing-timestamp issues stay out.
     await expect(panelRow(page, /fresh-p0/)).toHaveCount(0);
@@ -79,12 +79,12 @@ test.describe("needs attention panel", () => {
     await page.getByLabel("Urgent inactivity days").fill("40");
     await expect(panelRow(page, /P1 stale/)).toHaveCount(0);
     await expect(panelRow(page, /Fix crash on startup/)).toHaveCount(0);
-    await expect(panelRow(page, /P0 stalled long/)).toContainText(/possibly stalled/);
+    await expect(panelRow(page, /P0 stalled long/)).toContainText(/in-progress issues/);
     await expect(page.locator("summary", { hasText: "Needs attention" })).toContainText("2");
 
     // Lowering the stall threshold brings the stalled task back in too.
     await page.getByLabel("Stalled inactivity days").fill("5");
-    await expect(panelRow(page, /Stalled task/)).toContainText(/possibly stalled/);
+    await expect(panelRow(page, /Stalled task/)).toContainText(/in-progress issues/);
     await expect(page.locator("summary", { hasText: "Needs attention" })).toContainText("3");
 
     const urgentInput = page.getByLabel("Urgent inactivity days");

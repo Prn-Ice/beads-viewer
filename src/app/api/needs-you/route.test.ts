@@ -42,7 +42,7 @@ describe("GET /api/needs-you", () => {
   it("reports malformed CLI output instead of pretending the inbox is empty", async () => {
     vi.mocked(runBd).mockResolvedValue({ unexpected: true });
     const projects = await getProjects();
-    expect(projects.every((project) => project.error?.includes("Unexpected bd response"))).toBe(true);
+    expect(projects.every((project) => project.error?.includes("Unexpected bd output"))).toBe(true);
   });
   it("runs the exact cached CLI query per project and normalizes candidates", async () => {
     vi.mocked(runBd).mockResolvedValue([

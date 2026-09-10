@@ -69,7 +69,7 @@ test.describe("needs you inbox", () => {
 
     await expand(page);
     await expect(summary(page)).toContainText("3");
-    await expect(inbox(page)).toContainText("Snapshot");
+    await expect(inbox(page)).toContainText("As of");
     expect(control.requests).toBe(1);
 
     const region = inbox(page);
@@ -126,7 +126,7 @@ test.describe("needs you inbox", () => {
     await page.goto("/");
     await expand(page);
     const region = inbox(page);
-    await expect(region.getByRole("status")).toContainText("1 project could not be checked");
+    await expect(region.getByRole("status")).toContainText("Could not check 1 project");
     await expect(region).toContainText("beta: bd list exited 2: boom");
     await expect(region.getByText("No issues need you right now.")).toHaveCount(0);
     await expect(summary(page)).toContainText("?");
@@ -179,8 +179,8 @@ test.describe("needs you inbox", () => {
     await stubNeedsYou(page, control);
     await page.goto("/");
     await expand(page);
-    await expect(panel(page)).toContainText("failed to load needs you");
-    await expect(summary(page)).not.toContainText("Snapshot");
+    await expect(panel(page)).toContainText("Couldn't load the needs-you list");
+    await expect(summary(page)).not.toContainText("As of");
 
     control.fail = false;
     control.projects = [{ path: ALPHA, name: "alpha", issues: [issue("alpha-1", "Fix crash on startup")] }];
@@ -197,7 +197,7 @@ test.describe("needs you inbox", () => {
     await expect(summary(page)).toContainText("1");
     control.fail = true;
     await inbox(page).getByRole("button", { name: "Refresh needs you" }).click();
-    await expect(inbox(page)).toContainText("Showing the previous snapshot");
+    await expect(inbox(page)).toContainText("Showing the last result");
     await expect(inbox(page).getByRole("button", { name: /alpha-1/ })).toBeVisible();
     await expect(summary(page)).toContainText("!");
   });

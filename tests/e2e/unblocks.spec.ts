@@ -29,12 +29,12 @@ const analysis: UnblocksAnalysis = {
   rootStatus: "in_progress",
   projectCycleCount: 0,
   candidates: [
-    candidate("u-likely", "likely", "Likely ready after completion."),
+    candidate("u-likely", "likely", "Would become ready."),
     candidate("u-second", "not-likely", "Also blocked by u-other (Other issue, open).", {
       remainingBlockers: [{ id: "u-other", title: "Other issue", status: "open" }],
     }),
-    candidate("u-ready", "not-likely", "Already ready — completing this issue adds nothing."),
-    candidate("u-parent", "verify", "Parent/child relationship to alpha-0 needs verification."),
+    candidate("u-ready", "not-likely", "Already ready."),
+    candidate("u-parent", "verify", "Linked to alpha-0 as parent/child; check manually."),
   ],
   omitted: 0,
   missing: [],
@@ -89,19 +89,19 @@ for (const width of [1280, 390]) {
     await openDisclosure(drawer);
     await expect.poll(() => unblocksRequests).toBe(1);
 
-    await expect(drawer.getByText("1 likely ready after completion · 1 need verification · 2 not unblocked by this issue")).toBeVisible();
-    const likely = drawer.getByRole("region", { name: "Likely ready after completion" });
+    await expect(drawer.getByText("1 would become ready · 1 need a manual check · 2 would not change")).toBeVisible();
+    const likely = drawer.getByRole("region", { name: "Would become ready" });
     await expect(likely.getByRole("button", { name: /u-likely: Issue u-likely/ })).toBeVisible();
-    const verify = drawer.getByRole("region", { name: "Needs verification" });
+    const verify = drawer.getByRole("region", { name: "Needs a manual check" });
     await expect(verify.getByRole("button", { name: /u-parent: Issue u-parent/ })).toBeVisible();
-    await expect(verify.getByText(/Parent\/child relationship/)).toBeVisible();
-    const excluded = drawer.getByRole("region", { name: "Not unblocked by this issue" });
+    await expect(verify.getByText(/parent\/child/)).toBeVisible();
+    const excluded = drawer.getByRole("region", { name: "Would not change" });
     await expect(excluded.getByRole("button", { name: /u-second: Issue u-second/ })).toBeVisible();
     await expect(excluded.getByRole("button", { name: /u-ready: Issue u-ready/ })).toBeVisible();
     await expect(excluded.getByText(/Already ready/)).toBeVisible();
     // Remaining blockers are linked.
     await expect(excluded.getByRole("button", { name: /u-other/ })).toBeVisible();
-    await expect(drawer.getByText(/Snapshot estimate from the current dependency graph, not a reservation/)).toBeVisible();
+    await expect(drawer.getByText(/An estimate of what finishing this issue would unblock/)).toBeVisible();
 
     // No polling: waiting well past the 3s board poll interval changes nothing.
     await page.waitForTimeout(4000);
@@ -124,7 +124,7 @@ test("clicking a likely candidate opens it and Back returns to the root", async 
   const drawer = await openDrawer(page);
   await openDisclosure(drawer);
 
-  await drawer.getByRole("region", { name: "Likely ready after completion" })
+  await drawer.getByRole("region", { name: "Would become ready" })
     .getByRole("button", { name: /u-likely: Issue u-likely/ }).click();
   await expect(drawer.getByRole("heading", { name: "Issue u-likely" })).toBeVisible();
   await drawer.getByRole("button", { name: "Back", exact: true }).click();
@@ -138,13 +138,13 @@ test("a failed estimate shows an explicit error and Retry recovers", async ({ pa
   );
   const drawer = await openDrawer(page);
   await openDisclosure(drawer);
-  await expect(drawer.getByText(/failed to load unblock estimate/)).toBeVisible();
+  await expect(drawer.getByText(/Couldn't load the unblock estimate/)).toBeVisible();
 
   // Register the fixed route after, so the retry succeeds.
   await page.route("**/api/projects/*/issues/*/unblocks", (route) =>
     route.fulfill({ json: { fetchedAt: Date.now(), ...analysis } }),
   );
   await drawer.getByRole("button", { name: "Retry", exact: true }).click();
-  await expect(drawer.getByRole("region", { name: "Likely ready after completion" })).toBeVisible();
-  await expect(drawer.getByText(/failed to load unblock estimate/)).toHaveCount(0);
+  await expect(drawer.getByRole("region", { name: "Would become ready" })).toBeVisible();
+  await expect(drawer.getByText(/Couldn't load the unblock estimate/)).toHaveCount(0);
 });

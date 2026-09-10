@@ -38,11 +38,11 @@ for (const width of [1280, 390]) {
     const up = page.getByRole("region", { name: "Blocked by", exact: true });
     const down = page.getByRole("region", { name: "Blocks", exact: true });
     await up.getByRole("button", { name: "Expand b Blocked by", exact: true }).click();
-    await expect(up).toContainText("historical link");
-    await expect(up).toContainText("reference shown above");
+    await expect(up).toContainText("blocking issue is closed");
+    await expect(up).toContainText("listed above");
     await up.getByRole("button", { name: "Expand c Blocked by", exact: true }).click();
     await expect(up).toContainText("cycle");
-    await expect(up).toContainText("Depth limit reached");
+    await expect(up).toContainText(/Stops here/);
     await expect(up.getByRole("button", { name: /Expand end/ })).toHaveCount(0);
     await expect(up).toContainText("parent (parent-child)");
     await expect(up).toContainText("related (related)");
@@ -67,10 +67,10 @@ test("missing chain nodes show an error and can be retried", async ({ page }) =>
   await page.locator("summary", { hasText: "Explore blocker chains" }).click();
   const up = page.getByRole("region", { name: "Blocked by", exact: true });
   await up.getByRole("button", { name: "Expand missing Blocked by", exact: true }).click();
-  await expect(up).toContainText("Issue unavailable");
+  await expect(up).toContainText(/Couldn.t load this issue/);
   await page.route("**/issues/missing?relationships=all", (route) => route.fulfill({ json: issue("missing") }));
   await up.getByRole("button", { name: "Retry missing", exact: true }).click();
-  await expect(up).not.toContainText("Issue unavailable");
+  await expect(up).not.toContainText(/Couldn.t load this issue/);
 });
 
 test("limits distinct issue requests even for a wide root", async ({ page }) => {
@@ -83,11 +83,11 @@ test("limits distinct issue requests even for a wide root", async ({ page }) => 
   });
   await page.locator("summary", { hasText: "Explore blocker chains" }).click();
   const up = page.getByRole("region", { name: "Blocked by", exact: true });
-  await expect(up).toContainText("More links omitted");
+  await expect(up).toContainText("More rows not shown");
   for (let i = 0; i < 30; i++) {
     await up.getByRole("button", { name: `Expand wide-${i} Blocked by`, exact: true }).click();
   }
-  await expect(page.getByText(/Issue load limit reached/)).toBeVisible();
+  await expect(page.getByText(/Load limit reached/)).toBeVisible();
   await expect.poll(() => calls).toBe(30); // Root plus 29 expanded issues.
 });
 

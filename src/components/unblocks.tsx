@@ -82,7 +82,7 @@ export function Unblocks({ projectId, issueId, onSelect }: UnblocksProps) {
     let cancelled = false;
     fetch(`/api/projects/${projectId}/issues/${encodeURIComponent(issueId)}/unblocks`)
       .then((response) => {
-        if (!response.ok) throw new Error(`failed to load unblock estimate (HTTP ${response.status})`);
+        if (!response.ok) throw new Error(`Couldn't load the unblock estimate (HTTP ${response.status}).`);
         return response.json();
       })
       .then((data: UnblocksAnalysis) => {
@@ -113,9 +113,9 @@ export function Unblocks({ projectId, issueId, onSelect }: UnblocksProps) {
       <summary className="cursor-pointer text-sm font-medium">What would this unblock?</summary>
       <div className="mt-3 flex min-w-0 flex-col gap-4">
         <p className="text-xs text-muted-foreground">
-          Snapshot estimate from the current dependency graph, not a reservation. Up to {UNBLOCK_CANDIDATE_CAP} direct dependents are checked against the installed bd readiness semantics.
+          An estimate of what finishing this issue would unblock, based on the current issue links. Checks up to {UNBLOCK_CANDIDATE_CAP} issues that directly depend on this one.
         </p>
-        {!analysis && !error && <p role="status" className="text-sm">Loading estimate...</p>}
+        {!analysis && !error && <p role="status" className="text-sm">Checking what this would unblock...</p>}
         {error && (
           <div role="status" className="text-sm">
             {error}{" "}
@@ -128,22 +128,22 @@ export function Unblocks({ projectId, issueId, onSelect }: UnblocksProps) {
           <>
             {analysis.projectNote && <p role="status" className="text-sm">{analysis.projectNote}</p>}
             <p role="status" className="text-sm">
-              {likely.length} likely ready after completion · {verify.length} need verification · {notLikely.length} not unblocked by this issue
+              {likely.length} would become ready · {verify.length} need a manual check · {notLikely.length} would not change
             </p>
             {analysis.candidates.length === 0 && analysis.omitted === 0 && (
-              <p className="text-sm text-muted-foreground">No direct dependents to estimate.</p>
+              <p className="text-sm text-muted-foreground">No issues directly depend on this one.</p>
             )}
-            <Group title="Likely ready after completion" candidates={likely} onSelect={onSelect} />
-            <Group title="Needs verification" candidates={verify} onSelect={onSelect} />
-            <Group title="Not unblocked by this issue" candidates={notLikely} onSelect={onSelect} />
+            <Group title="Would become ready" candidates={likely} onSelect={onSelect} />
+            <Group title="Needs a manual check" candidates={verify} onSelect={onSelect} />
+            <Group title="Would not change" candidates={notLikely} onSelect={onSelect} />
             {analysis.omitted > 0 && (
               <p role="status" className="text-xs text-muted-foreground">
-                {analysis.omitted} more dependent{analysis.omitted === 1 ? "" : "s"} omitted by the candidate limit.
+                Only the first {UNBLOCK_CANDIDATE_CAP} dependents are shown; {analysis.omitted} more {analysis.omitted === 1 ? "is" : "are"} not listed.
               </p>
             )}
             {analysis.missing.length > 0 && (
               <p role="status" className="text-xs text-muted-foreground">
-                Records could not be loaded for: {analysis.missing.join(", ")}.
+                Could not load details for: {analysis.missing.join(", ")}.
               </p>
             )}
           </>

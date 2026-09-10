@@ -44,10 +44,10 @@ const EDGE_STYLE: Record<EdgeKind, { stroke: string; dash: string; label: string
 };
 
 const KIND_DESCRIPTION: Record<EdgeKind, string> = {
-  blocks: "Arrows point from the dependent to its prerequisite.",
-  "parent-child": "Arrows point from the child to its parent.",
-  related: "Dashed lines mark associations, not ordinary blockers.",
-  other: "Dotted gray lines mark conditional or unknown relationship types.",
+  blocks: "The arrow points from the blocked issue to the one blocking it.",
+  "parent-child": "The arrow points from the child to its parent.",
+  related: "Dashed lines mark non-blocking links.",
+  other: "Dotted gray lines mark conditional or unknown link types.",
 };
 
 function Legend() {
@@ -80,7 +80,7 @@ function Legend() {
       <li className="flex items-center gap-2">
         <span className="inline-block h-3 w-3 shrink-0 rounded border border-dashed border-muted-foreground bg-muted/40" />
         <span>
-          <span className="font-medium text-foreground">Closed</span> neighbors and unresolved targets are terminal. Open a closed issue as the root to explore its history.
+          <span className="font-medium text-foreground">Closed</span> neighbors and unknown targets stop the graph. Open a closed issue to explore its history.
         </span>
       </li>
     </ul>
@@ -108,7 +108,7 @@ function NodeBox({ node, view, expanded, canExpandNode, loadingNode, onToggleExp
       <button
         type="button"
         disabled={node.missing}
-        aria-label={node.missing ? "Unresolved reference" : `${node.id}: ${node.title ?? "Details not loaded"}, ${node.status ?? "status unknown"}, priority ${node.priority ?? "unknown"}`}
+        aria-label={node.missing ? "Unknown issue" : `${node.id}: ${node.title ?? "Details not loaded"}, ${node.status ?? "status unknown"}, priority ${node.priority ?? "unknown"}`}
         aria-current={node.isRoot ? "true" : undefined}
         onClick={() => onOpenNode(node)}
         className={`flex h-full min-w-0 flex-col items-stretch gap-0.5 rounded-md p-1.5 text-left text-xs focus-visible:outline-2 focus-visible:outline-ring ${
@@ -119,7 +119,7 @@ function NodeBox({ node, view, expanded, canExpandNode, loadingNode, onToggleExp
           <span className="truncate">{node.missing ? "unresolved" : node.id}</span>
           {node.isRoot && <span className="shrink-0 font-sans font-medium text-primary">root</span>}
         </span>
-        <span className="truncate text-xs font-medium">{node.missing ? "Unresolved reference" : (node.title ?? "Details not loaded")}</span>
+        <span className="truncate text-xs font-medium">{node.missing ? "Unknown issue" : (node.title ?? "Details not loaded")}</span>
         <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
           <span className="capitalize">{node.status?.replaceAll("_", " ") ?? "Status unknown"}</span>
           <span>{node.priority !== undefined ? `P${node.priority}` : "P?"}</span>
@@ -330,7 +330,7 @@ function GraphControls({
         </div>
       )}
       {epicScope && !epicScope.children && !epicScope.error && <p role="status" className="text-xs">Loading epic scope...</p>}
-      {epicScope?.children && <p className="text-xs text-muted-foreground">Direct-child hierarchy is shown in full within the node limit. Expand a child to load its connections inside this epic. Outside neighbors are omitted.</p>}
+      {epicScope?.children && <p className="text-xs text-muted-foreground">All direct children are shown, up to the {GRAPH_MAX_NODES}-issue limit. Expand a child to see its links within this epic. Links outside the epic are hidden.</p>}
 
       {epicScope?.error && (
         <p role="status" className="text-sm">
@@ -345,13 +345,13 @@ function GraphControls({
         <p role="status" className="text-sm">
           {errors[rootId]}{" "}
           <Button size="sm" variant="outline" onClick={() => retryNode(rootId)}>
-            Retry relationships
+            Retry
           </Button>
         </p>
       )}
 
       {limited && (
-        <p role="status" className="text-sm">Issue load limit reached. Open an issue to explore from there.</p>
+        <p role="status" className="text-sm">Load limit reached — open an issue above to keep exploring.</p>
       )}
 
       {Object.entries(errors)
@@ -365,12 +365,12 @@ function GraphControls({
           </p>
         ))}
 
-      {result.truncated && <p className="text-xs">More nodes omitted by the {GRAPH_MAX_NODES}-node limit.</p>}
-      {result.edgeTruncated && <p className="text-xs">More edges omitted by the {GRAPH_MAX_EDGES}-edge limit.</p>}
+      {result.truncated && <p className="text-xs">Only the first {GRAPH_MAX_NODES} issues are shown.</p>}
+      {result.edgeTruncated && <p className="text-xs">Only the first {GRAPH_MAX_EDGES} connections are shown.</p>}
       {result.incomplete && !result.truncated && (
-        <p className="text-xs">Some relationship data is missing; the graph may be incomplete.</p>
+        <p className="text-xs">Some links could not be loaded — the graph may be incomplete.</p>
       )}
-      {result.cycle && <p className="text-xs">Directed cycles are marked; each issue is visited once.</p>}
+      {result.cycle && <p className="text-xs">Loops are marked; each issue appears once.</p>}
 
       {epicScope?.epic && epicScope.children && epicScope.children.length === 0 && (
         <p className="text-sm text-muted-foreground">No children yet.</p>
@@ -378,13 +378,13 @@ function GraphControls({
 
       {expandableCount > 0 && (
         <p className="text-xs text-muted-foreground">
-          {expandableCount} node{expandableCount === 1 ? "" : "s"} can be expanded one more hop.
+          {expandableCount} issue{expandableCount === 1 ? "" : "s"} can be expanded one more step.
         </p>
       )}
 
       <details className="rounded-md border p-2">
         <summary className="cursor-pointer text-xs font-medium">
-          List view ({result.nodes.length} nodes, {result.edges.length} edges)
+          List view ({result.nodes.length} issues, {result.edges.length} connections)
         </summary>
         <div className="mt-2 grid gap-3 text-sm md:grid-cols-2">
           <ol className="flex flex-col gap-1">
@@ -396,7 +396,7 @@ function GraphControls({
                   onClick={() => openNode(node)}
                   className="min-w-0 flex-1 truncate text-left underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-ring"
                 >
-                  {node.missing ? "Unresolved reference" : `${node.id}: ${node.title ?? "Details not loaded"}`}
+                  {node.missing ? "Unknown issue" : `${node.id}: ${node.title ?? "Details not loaded"}`}
                 </button>
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {node.status?.replaceAll("_", " ") ?? "Status unknown"}
@@ -614,9 +614,9 @@ export function DependencyGraph({ projectId, issue, onSelect }: DependencyGraphP
     const promise = (async () => {
       try {
         const response = await fetch(`/api/projects/${projectId}/issues/${encodeURIComponent(id)}?relationships=all`, { signal: controller.signal });
-        if (!response.ok) throw new Error("Issue unavailable or failed to load");
+        if (!response.ok) throw new Error("Couldn't load this issue");
         const data: BeadsIssue = await response.json();
-        if (data.id !== id) throw new Error("Unexpected issue response");
+        if (data.id !== id) throw new Error("Unexpected response from the server");
         setLoaded((current) => ({ ...current, [id]: data }));
         return data;
       } catch (error) {
@@ -688,7 +688,7 @@ export function DependencyGraph({ projectId, issue, onSelect }: DependencyGraphP
     const epic = epicId === rootId ? root : await load(epicId);
     if (controller.signal.aborted) return;
     if (!epic) {
-      setEpicScope({ epic: null, children: null, error: "Parent epic unavailable or failed to load.", targetId: epicId });
+      setEpicScope({ epic: null, children: null, error: "Couldn't load the parent epic.", targetId: epicId });
       return;
     }
     if (epic.issue_type !== "epic") {
@@ -697,7 +697,7 @@ export function DependencyGraph({ projectId, issue, onSelect }: DependencyGraphP
     }
     try {
       const response = await fetch(`/api/projects/${projectId}/issues/${encodeURIComponent(epicId)}/children`, { signal: controller.signal });
-      if (!response.ok) throw new Error(`failed to load children (HTTP ${response.status})`);
+      if (!response.ok) throw new Error(`Couldn't load children (HTTP ${response.status})`);
       const children: EpicChild[] = await response.json();
       if (!controller.signal.aborted) setEpicScope({ epic, children, error: null, targetId: epicId });
     } catch (error) {
@@ -771,16 +771,16 @@ export function DependencyGraph({ projectId, issue, onSelect }: DependencyGraphP
         <summary className="cursor-pointer text-sm font-medium">Dependency graph</summary>
         <div className="mt-3 flex min-w-0 flex-col gap-4">
           <p className="text-xs text-muted-foreground">
-            Explore relationships around this issue: up to {GRAPH_MAX_DEPTH} hops,
-            {" "}{GRAPH_MAX_NODES} issues and {GRAPH_MAX_EDGES} edges. Expand nodes to load more,
-            or select one to open its details.
+            Shows the issues linked to this one, up to {GRAPH_MAX_DEPTH} steps out,
+            {" "}{GRAPH_MAX_NODES} issues and {GRAPH_MAX_EDGES} connections. Expand a node to
+            load its links, or select one to open the issue.
           </p>
-          {pending.has(rootId) && !loaded[rootId] && <p role="status" className="text-xs">Loading full relationships...</p>}
+          {pending.has(rootId) && !loaded[rootId] && <p role="status" className="text-xs">Loading links...</p>}
 
           {result.nodes.length > 0 && (
             <>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-muted-foreground">Hover or focus an edge to read its type label.</span>
+                <span className="text-xs text-muted-foreground">Hover or focus a connection to see its type.</span>
                 <Button
                   ref={expandRef}
                   size="sm"

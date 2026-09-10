@@ -138,7 +138,7 @@ for (const width of [1280, 390]) {
     await expect(drawer).toContainText("parent-child");
     await expect(drawer).toContainText("related");
     await expect(drawer).toContainText("other/unknown");
-    await expect(drawer.getByText(/Arrows point from the dependent to its prerequisite/)).toBeVisible();
+    await expect(drawer.getByText(/The arrow points from the blocked issue/)).toBeVisible();
     // The conditional edge is present; its label is revealed on hover/focus.
     await expect(edgeLocator(graphRegion(drawer), "alpha-1", "cond", "conditional")).toHaveCount(1);
 
@@ -154,11 +154,11 @@ for (const width of [1280, 390]) {
     // Expanding e exposes the cycle back to alpha-1 and stops there.
     await expandNodeButton(drawer, "e").click();
     await expect(edgeLocator(graphRegion(drawer), "alpha-1", "e", "blocks")).toHaveCount(1);
-    await expect(drawer.getByText("Directed cycles are marked; each issue is visited once.")).toBeVisible();
+    await expect(drawer.getByText("Loops are marked; each issue appears once.")).toBeVisible();
     await expect.poll(() => requests).toEqual(["alpha-1", "d", "e"]);
 
     // Unresolved references are terminal: no request is ever made for them.
-    await expect(graphRegion(drawer).getByRole("button", { name: /unresolved reference/i })).toBeVisible();
+    await expect(graphRegion(drawer).getByRole("button", { name: /unknown issue/i })).toBeVisible();
     expect(requests).not.toContain("__missing__");
 
     await graphRegion(drawer).evaluate((element) => {
@@ -287,13 +287,13 @@ test("a failed node load shows an explicit error and Retry recovers", async ({ p
   await drawer.getByRole("tab", { name: /Dependencies/ }).click();
   await openGraph(drawer);
   await expandNodeButton(drawer, "ghost").click();
-  await expect(drawer.getByText(/ghost: Issue unavailable/)).toBeVisible();
+  await expect(drawer.getByText(/ghost: Couldn.t load this issue/)).toBeVisible();
   await expect.poll(() => requests).toEqual(["alpha-1", "ghost"]);
 
   // Register the fixed route after, so the retry succeeds and expands.
   await page.route("**/issues/ghost?relationships=all", (route) => route.fulfill({ json: issue("ghost") }));
   await drawer.getByRole("button", { name: "Retry ghost", exact: true }).click();
-  await expect(drawer.getByText(/ghost: Issue unavailable/)).toHaveCount(0);
+  await expect(drawer.getByText(/ghost: Couldn.t load this issue/)).toHaveCount(0);
   await expect(drawer.getByRole("button", { name: "Collapse node ghost", exact: true })).toBeVisible();
 });
 
@@ -307,7 +307,7 @@ test("a wide root truncates at the node limit with an explicit note", async ({ p
   const drawer = page.getByRole("dialog");
   await drawer.getByRole("tab", { name: /Dependencies/ }).click();
   await openGraph(drawer);
-  await expect(drawer.getByText(/More nodes omitted by the 30-node limit/)).toBeVisible();
+  await expect(drawer.getByText(/Only the first 30 issues are shown/)).toBeVisible();
 });
 
 test("board polling never triggers per-issue graph requests", async ({ page }) => {

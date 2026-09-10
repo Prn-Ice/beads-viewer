@@ -61,21 +61,21 @@ for (const width of [1280, 390]) {
 test("scope changes and disappearing issues do not manufacture events", async ({ page }) => {
   const control = await setup(page);
   const summary = await openSummary(page);
-  await expect(summary).toContainText("No observed changes");
+  await expect(summary).toContainText("No changes seen");
   await page.getByRole("button", { name: "All", exact: true }).click();
   await expect(page.getByRole("region", { name: "Issue board" }).getByRole("button", { name: /Old closed task/ })).toBeVisible();
-  await expect(summary).toContainText("No observed changes");
+  await expect(summary).toContainText("No changes seen");
   await page.getByRole("button", { name: "Open", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Closed", exact: true })).toHaveCount(0);
   control.alpha[0] = { ...control.alpha[0], status: "closed" };
   await page.clock.runFor(3000);
   await expect(page.getByRole("region", { name: "Issue board" }).getByRole("button", { name: /Initial task/ })).toHaveCount(0);
-  await expect(summary).toContainText("No observed changes");
+  await expect(summary).toContainText("No changes seen");
   await page.getByRole("button", { name: "All", exact: true }).click();
   await expect(summary.getByRole("listitem")).toHaveCount(1);
   await expect(summary.getByRole("button", { name: /session-a/ })).toContainText("Closed");
-  await summary.getByRole("button", { name: "Reset baseline" }).click();
-  await expect(summary).toContainText("No observed changes");
+  await summary.getByRole("button", { name: "Reset" }).click();
+  await expect(summary).toContainText("No changes seen");
   control.alpha[0] = { ...control.alpha[0], status: "open" };
   await page.clock.runFor(3000);
   await expect(summary).toContainText("Reopened");
@@ -97,14 +97,14 @@ test("filters, failed polls, project switches and resets preserve independent ba
   control.fail = false;
   await page.getByRole("button", { name: /^beta/ }).click();
   await expect(page.getByRole("heading", { name: "beta", exact: true })).toBeVisible();
-  await expect(summary).toContainText("No observed changes");
+  await expect(summary).toContainText("No changes seen");
   await page.getByRole("button", { name: /^alpha/ }).click();
   await expect(page.getByRole("heading", { name: "alpha", exact: true })).toBeVisible();
   await expect(summary).toContainText("Title changed");
-  await summary.getByRole("button", { name: "Reset baseline" }).click();
-  await expect(summary).toContainText("No observed changes");
+  await summary.getByRole("button", { name: "Reset" }).click();
+  await expect(summary).toContainText("No changes seen");
   await page.clock.runFor(3000);
-  await expect(summary).toContainText("No observed changes");
+  await expect(summary).toContainText("No changes seen");
 });
 
 test("a hidden tab only compares the next successful snapshot on return", async ({ page }) => {
@@ -118,7 +118,7 @@ test("a hidden tab only compares the next successful snapshot on return", async 
   control.alpha[0] = { ...control.alpha[0], title: "While away" };
   await page.clock.runFor(9000);
   expect(control.requests).toBe(before);
-  await expect(summary).toContainText("No observed changes");
+  await expect(summary).toContainText("No changes seen");
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
     document.dispatchEvent(new Event("visibilitychange"));

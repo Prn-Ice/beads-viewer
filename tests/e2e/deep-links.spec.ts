@@ -91,7 +91,7 @@ test("switching projects clears the open issue", async ({ page }) => {
 test("a missing issue shows a predictable error in the drawer", async ({ page }) => {
   await page.goto(`/?project=${encodeURIComponent(alphaPath)}&issue=does-not-exist`);
   const drawer = page.getByRole("dialog");
-  await expect(drawer.getByText(/failed to load issue/)).toBeVisible();
+  await expect(drawer.getByText(/Couldn.t load this issue/)).toBeVisible();
   await expect(drawer.getByRole("button", { name: "Retry" })).toBeVisible();
 });
 

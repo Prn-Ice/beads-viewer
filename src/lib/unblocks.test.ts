@@ -120,7 +120,7 @@ describe("positive path (sole active blocker)", () => {
     const exp = explain([blockedItem("c-1", [{ id: "root-1" }])]);
     const records = { "c-1": candidate("c-1", [{ id: "root-1", dependency_type: "blocks", status: "open" }]) };
     const analysis = analyze(root, exp, records);
-    expect(verdictFor(analysis, "c-1")).toMatchObject({ verdict: "likely", reason: "Likely ready after completion." });
+    expect(verdictFor(analysis, "c-1")).toMatchObject({ verdict: "likely", reason: "Would become ready." });
   });
   it("treats resolved blocks edges and pure associations as harmless", () => {
     const root = rootIssue([hydratedDependent("c-1")]);
@@ -165,7 +165,7 @@ describe("positive path (sole active blocker)", () => {
     const exp = explain([], ["c-1"]);
     const records = { "c-1": candidate("c-1", []) };
     const result = verdictFor(analyze(root, exp, records), "c-1");
-    expect(result).toMatchObject({ verdict: "not-likely", reason: "Already ready — completing this issue adds nothing." });
+    expect(result).toMatchObject({ verdict: "not-likely", reason: "Already ready." });
   });
 });
 
@@ -176,7 +176,7 @@ describe("root-level conditions", () => {
     const exp = explain([blockedItem("c-1", [{ id: "root-1" }])]);
     const records = { "c-1": candidate("c-1", [{ id: "root-1", dependency_type: "blocks", status: "open" }]) };
     const analysis = analyze(root, exp, records);
-    expect(analysis.projectNote).toContain("Root issue status is closed");
+    expect(analysis.projectNote).toContain("This issue is closed");
     expect(verdictFor(analysis, "c-1")?.verdict).toBe("verify");
   });
   it("a project with dependency cycles forces verification", () => {
@@ -224,7 +224,7 @@ describe("snapshot contradictions", () => {
     const records = { "c-1": candidate("c-1", [{ id: "root-1", dependency_type: "blocks", status: "open" }]) };
     const result = verdictFor(analyze(root, exp, records), "c-1");
     expect(result?.verdict).toBe("verify");
-    expect(result?.reason).toContain("in its record but closed in the readiness snapshot");
+    expect(result?.reason).toContain("doesn't match between bd's data sources");
   });
   it("waits-for and conditional-blocks dependents appear as verification results", () => {
     const root = rootIssue([hydratedDependent("gate", "waits-for"), hydratedDependent("cond", "conditional-blocks")]);
@@ -267,7 +267,7 @@ describe("candidate eligibility", () => {
       wisp: candidate("wisp", [{ id: "root-1", dependency_type: "blocks", status: "open" }], { ephemeral: true }),
     };
     const analysis = analyze(root, exp, records);
-    expect(verdictFor(analysis, "epic")?.reason).toContain("not ordinary work");
+    expect(verdictFor(analysis, "epic")?.reason).toContain("isn't regular work");
     expect(verdictFor(analysis, "pin")?.reason).toContain("pinned");
     expect(verdictFor(analysis, "wisp")?.reason).toContain("ephemeral");
   });
@@ -289,7 +289,7 @@ describe("time, hierarchy, and relationship types", () => {
     };
     const analysis = analyze(root, exp, records);
     expect(verdictFor(analysis, "future")).toMatchObject({ verdict: "not-likely", reason: "Deferred until 2026-10-01T00:00:00Z." });
-    expect(verdictFor(analysis, "bad")).toMatchObject({ verdict: "verify", reason: "defer_until is not a valid timestamp." });
+    expect(verdictFor(analysis, "bad")).toMatchObject({ verdict: "verify", reason: "It has an invalid defer date; check manually." });
     expect(verdictFor(analysis, "past")?.verdict).toBe("likely");
   });
   it("a parent-child edge on the candidate needs verification", () => {
@@ -303,7 +303,7 @@ describe("time, hierarchy, and relationship types", () => {
     };
     const result = verdictFor(analyze(root, exp, records), "child");
     expect(result?.verdict).toBe("verify");
-    expect(result?.reason).toContain("Parent/child");
+    expect(result?.reason).toContain("parent/child");
   });
   it("parent inheritance (root edge typed parent-child) needs verification", () => {
     const root = rootIssue([hydratedDependent("child", "parent-child")]);
@@ -311,7 +311,7 @@ describe("time, hierarchy, and relationship types", () => {
     const records = { child: candidate("child", [{ id: "root-1", dependency_type: "parent-child", status: "open" }]) };
     const result = verdictFor(analyze(root, exp, records), "child");
     expect(result?.verdict).toBe("verify");
-    expect(result?.reason).toContain("Root relationship type is parent-child");
+    expect(result?.reason).toContain("not a blocking link");
   });
   it("conditional-blocks, waits-for, until, and unknown types need verification", () => {
     const root = rootIssue([hydratedDependent("cond"), hydratedDependent("wait"), hydratedDependent("until"), hydratedDependent("weird")]);
@@ -350,7 +350,7 @@ describe("incomplete data", () => {
     const records = { "c-1": candidate("c-1", [{ id: "root-1", dependency_type: "blocks", status: "open" }]) };
     const result = verdictFor(analyze(root, exp, records), "c-1");
     expect(result?.verdict).toBe("verify");
-    expect(result?.reason).toContain("inconsistent");
+    expect(result?.reason).toContain("don't add up");
   });
   it("missing candidate records are reported and verified", () => {
     const root = rootIssue([hydratedDependent("ghost")]);
@@ -375,7 +375,7 @@ describe("incomplete data", () => {
     } as BeadsIssue;
     const analysis = analyze(root, exp, { partial, nocount });
     expect(verdictFor(analysis, "partial")?.reason).toContain("Only 1 of 4 dependencies");
-    expect(verdictFor(analysis, "nocount")?.reason).toContain("Dependency counts are missing");
+    expect(verdictFor(analysis, "nocount")?.reason).toContain("dependency list is missing");
   });
   it("a blocks dependency with unknown status is verified", () => {
     const root = rootIssue([hydratedDependent("c-1")]);
@@ -409,6 +409,6 @@ describe("incomplete data", () => {
     const records = { "c-1": candidate("c-1", [{ id: "other", dependency_type: "blocks", status: "closed" }]) };
     const result = verdictFor(analyze(root, exp, records), "c-1");
     expect(result?.verdict).toBe("verify");
-    expect(result?.reason).toContain("not visible");
+    expect(result?.reason).toContain("doesn't show this issue blocking it");
   });
 });
