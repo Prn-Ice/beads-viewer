@@ -159,7 +159,7 @@ export function Dashboard() {
             const res = await fetch(`/api/github/repos/${encodeURIComponent(ref.slug)}`);
             entry = githubEntryFromResponse(ref.slug, res, await res.json());
           } catch {
-            entry = { slug: ref.slug, state: "error", message: "request failed" };
+            entry = { slug: ref.slug, state: "error", message: "couldn't fetch" };
           }
           if (sweep.dead) return;
           setGithubRepos((current) => current.map((e) => (e.slug === ref.slug ? entry : e)));
@@ -178,7 +178,7 @@ export function Dashboard() {
     let cancelled = false;
     fetch(`/api/projects/${encodeURIComponent(selectedId)}/issues?scope=${view.scope}`)
       .then((res) => {
-        if (!res.ok) throw new Error(`failed to load issues (HTTP ${res.status})`);
+        if (!res.ok) throw new Error(`Couldn't load issues (HTTP ${res.status})`);
         return res.json();
       })
       .then((data: IssueListResponse) => {

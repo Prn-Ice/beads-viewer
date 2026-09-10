@@ -92,7 +92,7 @@ test("filters, failed polls, project switches and resets preserve independent ba
   await expect(summary.getByRole("listitem")).toHaveCount(1);
   control.fail = true;
   await page.clock.runFor(3000);
-  await expect(page.getByText(/failed to load issues/)).toBeVisible();
+  await expect(page.getByText(/Couldn't load issues/)).toBeVisible();
   await expect(summary.getByRole("listitem")).toHaveCount(1);
   control.fail = false;
   await page.getByRole("button", { name: /^beta/ }).click();

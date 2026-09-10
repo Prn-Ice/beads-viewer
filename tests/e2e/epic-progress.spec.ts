@@ -220,7 +220,7 @@ test.describe("epic progress", () => {
     await stubEpic(page, { childrenStatus: 500 });
     const drawer = await openEpicDrawer(page);
 
-    await expect(drawer.getByText(/failed to load children/)).toBeVisible();
+    await expect(drawer.getByText(/Couldn't load children/)).toBeVisible();
 
     // Registered after stubEpic, so this route wins for the retry.
     await page.route(`**/api/projects/*/issues/epic-root/children`, (route) =>

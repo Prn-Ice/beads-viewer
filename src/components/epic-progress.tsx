@@ -30,7 +30,7 @@ export function EpicProgress({ projectId, issueId, issueType, onSelectIssue }: E
     let cancelled = false;
     fetch(`/api/projects/${projectId}/issues/${encodeURIComponent(issueId)}/children`)
       .then((res) => {
-        if (!res.ok) throw new Error(`failed to load children (HTTP ${res.status})`);
+        if (!res.ok) throw new Error(`Couldn't load children (HTTP ${res.status})`);
         return res.json();
       })
       .then((data: EpicChild[]) => {
