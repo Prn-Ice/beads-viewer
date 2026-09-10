@@ -1,38 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronDownIcon, GitBranchIcon, GitGraphIcon, LoaderCircleIcon, RotateCwIcon, SearchIcon, TriangleAlertIcon } from "lucide-react";
 import { Board } from "@/components/board";
-import { IssueFilters } from "@/components/issue-filters";
-import { NeedsYou } from "@/components/needs-you";
-import { SessionChanges } from "@/components/session-changes";
+import {
+  DashboardHeader,
+} from "@/components/dashboard-header";
+import {
+  DashboardSidebar,
+  githubEntryFromResponse,
+  type GithubRepoEntry,
+} from "@/components/dashboard-sidebar";
 import { observeSession, resetSession, type ObservedSession } from "@/lib/session-changes";
 import { readDeepLink, withDeepLink } from "@/lib/navigation";
 import { IssueDrawer } from "@/components/issue-drawer";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import { GithubSettings } from "@/components/github-settings";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuBadge,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import {
   applyFilters,
   applyViewToParams,
@@ -42,173 +25,13 @@ import {
   type Scope,
   type ViewState,
 } from "@/lib/filters";
-import type { GithubRepoResponse, IssueListResponse, Project } from "@/lib/types";
+import type { IssueListResponse, Project } from "@/lib/types";
 
 const POLL_MS = 3_000;
 
 interface LoadedBoard {
   projectId: string;
   data: IssueListResponse;
-}
-
-// One entry per configured GitHub repo. Starts as "loading" and resolves to
-// "ok" (has beads), "empty" (no beads — hidden), or "error" (sync failed).
-interface GithubRepoEntry {
-  slug: string;
-  state: "loading" | "ok" | "empty" | "error";
-  project?: Project;
-  message?: string;
-}
-
-function toGithubEntry(slug: string, res: Response, data: unknown): GithubRepoEntry {
-  if (!res.ok) {
-    return { slug, state: "error", message: `HTTP ${res.status}` };
-  }
-  const body = data as GithubRepoResponse;
-  if (body.state === "ok") return { slug, state: "ok", project: body.project };
-  if (body.state === "empty") return { slug, state: "empty" };
-  return { slug, state: "error", message: body.message };
-}
-
-// One sidebar row for a selectable project: name plus open-issue count ("?"
-// when the count is unavailable). Used by the Projects and Worktrees groups;
-// the Broken and GitHub groups have their own rows.
-function ProjectRow({
-  project,
-  selectedId,
-  onSelect,
-}: {
-  project: Project;
-  selectedId: string | null;
-  onSelect: (path: string) => void;
-}) {
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        isActive={project.path === selectedId}
-        title={project.name}
-        onClick={() => onSelect(project.path)}
-      >
-        <span className="min-w-0 flex-1 truncate">{project.name}</span>
-        <SidebarMenuBadge className="static shrink-0">
-          {project.summary?.open_issues ?? "?"}
-        </SidebarMenuBadge>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  );
-}
-
-// Mobile-only replacement for the desktop SidebarTrigger + heading: one button
-// (logo, truncated project name, chevron) that opens the mobile sidebar sheet.
-// Must stay inside SidebarProvider, so it lives here rather than in ui/.
-function ProjectPickerButton({ name }: { name: string | null }) {
-  const { openMobile, setOpenMobile } = useSidebar();
-  return (
-    <Button
-      variant="ghost"
-      size="lg"
-      className="min-w-0 flex-1 justify-start gap-2 px-0 md:hidden"
-      aria-haspopup="dialog"
-      aria-expanded={openMobile}
-      aria-label={`Choose project: ${name ?? "View Beads"}`}
-      onClick={() => setOpenMobile(true)}
-    >
-      <Image
-        src="/brand/beads.svg"
-        alt="Beads"
-        width={24}
-        height={24}
-        unoptimized
-        className="shrink-0"
-      />
-      <span className="min-w-0 truncate text-lg font-semibold tracking-tight">
-        {name ?? "View Beads"}
-      </span>
-      <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
-    </Button>
-  );
-}
-
-// Sidebar group for GitHub repos: spinner rows while a repo syncs, a warning
-// row when it fails, and a normal project row once its beads project is ready.
-// Repos without beads ("empty") are not shown.
-function GithubRepoGroup({
-  repos,
-  selectedId,
-  onSelect,
-  onSaved,
-}: {
-  repos: GithubRepoEntry[];
-  selectedId: string | null;
-  onSelect: (path: string) => void;
-  onSaved: () => void;
-}) {
-  const visible = repos.filter((entry) => entry.state !== "empty");
-  const syncing = repos.some((entry) => entry.state === "loading");
-  return (
-    <SidebarGroup>
-      <SidebarGroupLabel className="gap-1.5 pr-8">
-        <GitGraphIcon className="size-3.5 text-muted-foreground" aria-hidden />
-        GitHub
-        {syncing && (
-          <LoaderCircleIcon className="size-3 animate-spin text-muted-foreground" aria-hidden />
-        )}
-      </SidebarGroupLabel>
-      <GithubSettings onSaved={onSaved} />
-      {visible.length > 0 && (
-        <SidebarGroupContent>
-        <SidebarMenu>
-          {visible.map((entry) => {
-            if (entry.state === "loading") {
-              return (
-                <SidebarMenuItem key={entry.slug}>
-                  <div
-                    role="status"
-                    aria-label={`Syncing ${entry.slug} from GitHub`}
-                    className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground"
-                  >
-                    <LoaderCircleIcon className="size-3.5 shrink-0 animate-spin" aria-hidden />
-                    <span className="min-w-0 flex-1 truncate">{entry.slug}</span>
-                  </div>
-                </SidebarMenuItem>
-              );
-            }
-            if (entry.state === "error" || !entry.project) {
-              return (
-                <SidebarMenuItem key={entry.slug}>
-                  <div
-                    role="status"
-                    title={entry.message ?? "sync failed"}
-                    className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground"
-                  >
-                    <TriangleAlertIcon className="size-3.5 shrink-0 text-destructive" aria-hidden />
-                    <span className="min-w-0 flex-1 truncate">{entry.slug}</span>
-                    <span className="sr-only"> sync failed: {entry.message ?? "unknown error"}</span>
-                  </div>
-                </SidebarMenuItem>
-              );
-            }
-            const project = entry.project;
-            return (
-              <SidebarMenuItem key={entry.slug}>
-                <SidebarMenuButton
-                  isActive={project.path === selectedId}
-                  title={project.name}
-                  onClick={() => onSelect(project.path)}
-                >
-                  <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                  <SidebarMenuBadge className="static shrink-0">
-                    {project.summary?.open_issues ?? "?"}
-                  </SidebarMenuBadge>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
-        </SidebarMenu>
-        </SidebarGroupContent>
-      )}
-    </SidebarGroup>
-  );
 }
 
 export function Dashboard() {
@@ -259,12 +82,6 @@ export function Dashboard() {
   const githubProjects = githubRepos.flatMap((entry) =>
     entry.state === "ok" && entry.project ? [entry.project] : [],
   );
-  // Local projects split into three sidebar groups: healthy ones under
-  // Projects, linked git worktrees under Worktrees, and ones whose `bd status`
-  // fails (stale/broken .beads) under Broken so they stop looking selectable.
-  const broken = (projects ?? []).filter((project) => project.summary === null);
-  const worktrees = (projects ?? []).filter((project) => project.worktree && project.summary !== null);
-  const healthy = (projects ?? []).filter((project) => !project.worktree && project.summary !== null);
   const allProjects = [...(projects ?? []), ...githubProjects];
 
   // Derive selection from the URL deep-link params so Back/Forward and direct
@@ -340,7 +157,7 @@ export function Dashboard() {
           let entry: GithubRepoEntry;
           try {
             const res = await fetch(`/api/github/repos/${encodeURIComponent(ref.slug)}`);
-            entry = toGithubEntry(ref.slug, res, await res.json());
+            entry = githubEntryFromResponse(ref.slug, res, await res.json());
           } catch {
             entry = { slug: ref.slug, state: "error", message: "request failed" };
           }
@@ -451,6 +268,10 @@ export function Dashboard() {
     }
   }
 
+  function onSearchBlur() {
+    searchSessionRef.current = false;
+  }
+
   function selectProject(path: string) {
     setTrail([]);
     setTrailProject(null);
@@ -506,198 +327,32 @@ export function Dashboard() {
 
   return (
     <SidebarProvider className="flex h-dvh min-h-0 w-full">
-      <Sidebar>
-        <SidebarHeader className="gap-2 border-b p-4">
-          <Image src="/brand/beads.svg" alt="Beads" width={28} height={28} unoptimized className="shrink-0 self-start" />
-          <span className="text-xs text-muted-foreground">Local issue dashboard</span>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Projects</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {projects === null &&
-                  [0, 1, 2].map((i) => (
-                    <SidebarMenuItem key={i}>
-                      <Skeleton className="mx-2 h-8 rounded-md" />
-                    </SidebarMenuItem>
-                  ))}
-                {projects?.length === 0 && githubRepos.length === 0 && (
-                  <p className="px-3 py-2 text-xs text-muted-foreground">
-                    No projects found. Run <code className="font-mono">bd init</code> in a
-                    project directory or set{" "}
-                    <code className="font-mono">BEADS_PROJECT_ROOTS</code>.
-                  </p>
-                )}
-                {healthy.map((project) => (
-                  <ProjectRow
-                    key={project.id}
-                    project={project}
-                    selectedId={selectedId}
-                    onSelect={selectProject}
-                  />
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-          {worktrees.length > 0 && (
-            <SidebarGroup>
-              <SidebarGroupLabel className="gap-1.5">
-                <GitBranchIcon className="size-3.5 text-muted-foreground" aria-hidden />
-                Worktrees
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {worktrees.map((project) => (
-                    <ProjectRow
-                      key={project.id}
-                      project={project}
-                      selectedId={selectedId}
-                      onSelect={selectProject}
-                    />
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
-          {broken.length > 0 && (
-            <SidebarGroup>
-              <SidebarGroupLabel className="gap-1.5">
-                <TriangleAlertIcon className="size-3.5 text-muted-foreground" aria-hidden />
-                Broken
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {broken.map((project) => (
-                    <SidebarMenuItem key={project.id}>
-                      <SidebarMenuButton
-                        isActive={project.path === selectedId}
-                        title={`${project.name} — bd status failed for this project`}
-                        onClick={() => selectProject(project.path)}
-                      >
-                        <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                          {project.name}
-                        </span>
-                        <TriangleAlertIcon
-                          className="size-3.5 shrink-0 text-destructive"
-                          aria-label="bd status failed for this project"
-                        />
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
-          <GithubRepoGroup
-            repos={githubRepos}
-            selectedId={selectedId}
-            onSelect={selectProject}
-            onSaved={onGithubSaved}
-          />
-        </SidebarContent>
-        <SidebarFooter className="max-h-[65vh] overflow-y-auto border-t p-4">
-          <NeedsYou onSelect={(path, id) => openIssue(id, path)} />
-          <SessionChanges
-            session={selectedId ? sessions[selectedId] : undefined}
-            onSelect={openIssue}
-            onReset={() => {
-              if (!selectedId) return;
-              const now = Date.now();
-              setSessions((current) => current[selectedId] ? { ...current, [selectedId]: resetSession(current[selectedId], now) } : current);
-            }}
-          />
-          <a
-            href="https://beads.gascity.com/"
-            target="_blank"
-            rel="noreferrer"
-            className="rounded text-xs text-muted-foreground underline-offset-4 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-          >
-            Beads documentation<span className="sr-only"> (opens in a new tab)</span>
-          </a>
-        </SidebarFooter>
-      </Sidebar>
+      <DashboardSidebar
+        projects={projects}
+        githubRepos={githubRepos}
+        selectedId={selectedId}
+        session={selectedId ? sessions[selectedId] : undefined}
+        onSelect={selectProject}
+        onGithubSaved={onGithubSaved}
+        onNeedsYouSelect={(path, id) => openIssue(id, path)}
+        onSessionSelect={openIssue}
+        onSessionReset={() => {
+          if (!selectedId) return;
+          const now = Date.now();
+          setSessions((current) => current[selectedId] ? { ...current, [selectedId]: resetSession(current[selectedId], now) } : current);
+        }}
+      />
       <SidebarInset className="flex min-h-0 min-w-0 flex-col gap-0">
-        <header className="flex shrink-0 flex-col border-b px-4 py-1.5">
-          <div className="flex min-w-0 items-center gap-2">
-            <SidebarTrigger className="hidden md:inline-flex" />
-            <ProjectPickerButton name={selectedProject?.name ?? null} />
-            <h1 className="max-md:sr-only min-w-0 flex-1 truncate text-lg font-semibold tracking-tight lg:text-xl">
-              {selectedProject?.name ?? "View Beads"}
-            </h1>
-            <div className="relative ml-auto hidden w-64 lg:block">
-              <SearchIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                value={view.search}
-                onChange={(event) => onSearchChange(event.target.value)}
-                onBlur={() => {
-                  searchSessionRef.current = false;
-                }}
-                placeholder="Search issues..."
-                aria-label="Search issues"
-                className="pl-8"
-              />
-            </div>
-            <div className="hidden items-center gap-1 rounded-lg border p-0.5 lg:flex">
-              <Button
-                variant={view.scope === "open" ? "secondary" : "ghost"}
-                size="sm"
-                aria-pressed={view.scope === "open"}
-                onClick={() => selectScope("open")}
-              >
-                Open
-              </Button>
-              <Button
-                variant={view.scope === "all" ? "secondary" : "ghost"}
-                size="sm"
-                aria-pressed={view.scope === "all"}
-                onClick={() => selectScope("all")}
-              >
-                All
-              </Button>
-            </div>
-            <IssueFilters filters={view.filters} choices={choices} onChange={toggleFilter} />
-            <Button variant="outline" size="icon" onClick={refresh} aria-label="Refresh">
-              <RotateCwIcon className="size-4" />
-            </Button>
-            <ThemeSwitcher />
-          </div>
-          <div className="mt-1 flex items-center gap-2 lg:hidden">
-            <div className="relative flex-1">
-              <SearchIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                value={view.search}
-                onChange={(event) => onSearchChange(event.target.value)}
-                onBlur={() => {
-                  searchSessionRef.current = false;
-                }}
-                placeholder="Search issues..."
-                aria-label="Search issues"
-                className="pl-8"
-              />
-            </div>
-            <div className="flex shrink-0 items-center gap-1 rounded-lg border p-0.5">
-              <Button
-                variant={view.scope === "open" ? "secondary" : "ghost"}
-                size="sm"
-                aria-pressed={view.scope === "open"}
-                onClick={() => selectScope("open")}
-              >
-                Open
-              </Button>
-              <Button
-                variant={view.scope === "all" ? "secondary" : "ghost"}
-                size="sm"
-                aria-pressed={view.scope === "all"}
-                onClick={() => selectScope("all")}
-              >
-                All
-              </Button>
-            </div>
-          </div>
-        </header>
+        <DashboardHeader
+          projectName={selectedProject?.name ?? null}
+          view={view}
+          choices={choices}
+          onSearchChange={onSearchChange}
+          onSearchBlur={onSearchBlur}
+          onScopeSelect={selectScope}
+          onFilterChange={toggleFilter}
+          onRefresh={refresh}
+        />
         {projects !== null && githubLoaded && urlProject && !validProject && (
           <p role="status" className="border-b px-4 py-2 text-sm text-muted-foreground">
             Linked project was not found. Select a project from the sidebar.
