@@ -45,6 +45,9 @@ next-env.d.ts
 /playwright-report/
 /result
 
+# npm pack artifacts
+*.tgz
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db

@@ -11,7 +11,10 @@ Built with Next.js, shadcn/ui and Tailwind. All data comes from the `bd` CLI.
 ## Install
 
 ```sh
-# from this flake
+# npm (Node >= 20.9 required)
+npm install -g view-beads
+
+# or from this flake
 nix run github:Prn-Ice/beads-viewer
 
 # or add it to your home-manager packages
@@ -19,7 +22,8 @@ inputs.view-beads.packages.x86_64-linux.default
 ```
 
 Requires `bd` (the `beads` package) — the nix package pulls it in
-automatically.
+automatically. The npm package ships the built standalone server, so it has no
+runtime npm dependencies.
 
 ## Usage
 
@@ -98,6 +102,16 @@ Environment variables: `BEADS_BIN` (path to `bd`), `BEADS_HOME` (where
 `BEADS_GITHUB_CACHE`, `GH_BIN` (path to `gh`), `VIEW_BEADS_CONFIG` (config file
 path), `VIEW_BEADS_SERVER` (built
 `server.js`), `VIEW_BEADS_NO_OPEN`.
+
+## Publishing
+
+`npm publish` builds the standalone server via the `prepack` hook and packs
+`bin/` plus `.next/standalone/`. `outputFileTracingExcludes` in
+`next.config.ts` keeps local-only data (`.git`, `.beads`, docs, tests) out of
+the build, and `scripts/stage-standalone.mjs` stages `public/` and
+`.next/static/` into the standalone folder after each build. Installing from
+git (rather than the registry) is not supported — the tarball is the only
+distribution channel.
 
 ## Architecture
 

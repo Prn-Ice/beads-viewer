@@ -99,7 +99,13 @@ function stopServer(port) {
 }
 
 function openBrowser(url) {
-  const child = spawn("xdg-open", [url], { stdio: "ignore", detached: true });
+  const [cmd, args] =
+    process.platform === "darwin"
+      ? ["open", [url]]
+      : process.platform === "win32"
+        ? ["cmd", ["/c", "start", "", url]]
+        : ["xdg-open", [url]];
+  const child = spawn(cmd, args, { stdio: "ignore", detached: true });
   child.on("error", () => {});
   child.unref();
 }
