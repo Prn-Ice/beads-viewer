@@ -65,20 +65,22 @@ pre-dolt database) land under **Broken** with a warning marker.
 
 ### Live updates
 
-The dashboard refreshes the open board every few seconds. By default each
-refresh re-runs `bd list`. With beads 1.3 or newer you can switch on the
+By default the dashboard refreshes the open board every few seconds, re-running
+`bd list` each time. With beads 1.3 or newer you can switch on the
 [events journal](https://beads.gascity.com/reference/events-journal) in a
-project:
+project instead:
 
 ```sh
 bd config set events-journal true
 ```
 
-While that project's board is open, view-beads then follows
-`bd events tail --follow` and only re-runs `bd` when the journal records a
-change, so refreshes are served from memory in between. Changes the journal
-doesn't record (a `bd dolt pull`, `bd sql` writes) still show up within 15
-seconds. The follower stops a minute after you leave the board.
+While that project's board is open, view-beads follows
+`bd events tail --follow` and pushes each change to the browser as it happens.
+The board stops polling and only reloads when something changed. Changes the
+journal doesn't record (a `bd dolt pull`, `bd sql` writes, a defer date
+passing) are caught by a server-side check every 15 seconds. The follower stops
+a minute after you leave the board or hide the tab. The sidebar's project
+counts still refresh every few seconds.
 
 view-beads never turns the journal on itself: the setting lives in your
 project's `.beads/config.yaml` and applies to every `bd` command there.

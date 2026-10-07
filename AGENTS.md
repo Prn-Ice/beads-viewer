@@ -79,7 +79,7 @@ See [worker setup](docs/workers.md) for worktree preparation and test ports.
 - `src/lib/github.ts` — mirrors GitHub beads repos as sparse clones (auth via `gh`)
 - `src/lib/config.ts` — local config file (repo selection), read per request, atomic writes
 - `src/lib/cache.ts` — tiny TTL cache for bd output; `clearProject` drops one project's entries
-- `src/lib/events.ts` — follows `bd events tail --follow` for open boards whose journal is on
+- `src/lib/events.ts` — follows `bd events tail --follow` for open boards whose journal is on, feeds the board event stream
 - `src/app/api/*` — JSON endpoints; no DB, thin wrappers over `bd`
 - `src/app/page.tsx` + `src/components/*` — client UI (sidebar, board, drawer)
 - `bin/view-beads.mjs` — CLI: start/reuse server, print link, open browser
@@ -87,13 +87,16 @@ See [worker setup](docs/workers.md) for worktree preparation and test ports.
 The dashboard polls projects and the selected board every 3 seconds while visible,
 pauses polling in hidden tabs, and refreshes on return. These endpoints use a
 1-second data cache. Open issue drawers do not poll. When a project has the
-beads 1.3+ events journal on (`events-journal: true`), requesting its board
-starts one `bd events tail --follow` child per project; every journal record
-clears that project's cache, and its board/status entries cache for 15
-seconds instead (unjournaled changes such as syncs land within that window).
-Followers stop after a minute without board requests, retry a minute after
-failing (journal off, older `bd`), and are killed when the server exits.
-view-beads never enables the journal itself.
+beads 1.3+ events journal on (`events-journal: true`), the board opens
+`GET /api/projects/[id]/events` (Server-Sent Events): it sends `live` (stop
+polling the board), `polling` (resume) or `change` (reload). The server runs
+one `bd events tail --follow` per watched project; every journal record clears
+that project's cache and pushes `change`. Subscribed projects are re-checked
+every 15 seconds for unjournaled changes (syncs, `bd sql`), and board/status
+cache entries for watched projects last 15 seconds. Hidden tabs close the
+stream; followers stop after a minute without listeners or board requests,
+retry a minute after failing (journal off, older `bd`), and are killed when the
+server exits. The sidebar keeps its 3-second poll. view-beads never enables the journal itself.
 
 `bd` binary location is resolved via `BEADS_BIN` env (default: `bd` from
 PATH). Project discovery roots come from `BEADS_PROJECT_ROOTS` (comma
