@@ -39,7 +39,7 @@
           default = view-beads;
           view-beads = pkgs.buildNpmPackage {
             pname = "view-beads";
-            version = "0.1.0";
+            version = "0.3.0";
             src = ./.;
             npmDepsHash = {
               x86_64-linux = "sha256-u/gTdGYBSUhwznNA8UnjZRfaE+IEMzy+i+b05pCfFoQ=";
