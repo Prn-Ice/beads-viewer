@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 // Fake bd for tests: answers subcommands from tests/fixtures/beads-data.json.
 // Supports: list [--ready] [--all], status, show <id>, comments <id>, fail, badjson.
+// The events journal is on when FAKE_BD_EVENTS points at a JSON Lines file:
+// `events tail --since N --follow` prints its records past N and keeps
+// printing lines appended to it until killed.
 
-import { readFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 
 const data = JSON.parse(
   readFileSync(new URL("./beads-data.json", import.meta.url), "utf8"),
@@ -36,6 +39,12 @@ switch (command) {
   case "comments":
     print(data.comments[rest[0]] ?? []);
     break;
+  case "config":
+    print({ key: rest[1], value: process.env.FAKE_BD_EVENTS ? "true" : "false" });
+    break;
+  case "events":
+    followEvents(Number(rest[rest.indexOf("--since") + 1]));
+    break;
   case "fail":
     console.error("boom");
     process.exit(2);
@@ -46,6 +55,21 @@ switch (command) {
   default:
     console.error(`unknown command: ${command}`);
     process.exit(2);
+}
+
+function followEvents(since) {
+  const file = process.env.FAKE_BD_EVENTS;
+  if (process.env.FAKE_BD_LOG) appendFileSync(process.env.FAKE_BD_LOG, `${args.join(" ")}\n`);
+  let printed = 0;
+  const flush = () => {
+    const lines = existsSync(file) ? readFileSync(file, "utf8").split("\n").filter(Boolean) : [];
+    for (const line of lines.slice(printed)) {
+      if (JSON.parse(line).seq > since) console.log(line);
+    }
+    printed = lines.length;
+  };
+  flush();
+  setInterval(flush, 20);
 }
 
 function print(value) {

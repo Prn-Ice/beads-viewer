@@ -1,6 +1,7 @@
 import { runBd } from "@/lib/bd";
 import { cached } from "@/lib/cache";
 import { discoverProjects } from "@/lib/discovery";
+import { isWatched, WATCHED_TTL_MS } from "@/lib/events";
 import type { Project, ProjectSummary } from "@/lib/types";
 
 const TTL_MS = 1_000;
@@ -14,7 +15,8 @@ export async function GET() {
     projects.map(async (project): Promise<Project> => {
       const id = encodeURIComponent(project.path);
       try {
-        const summary = await cached<ProjectSummary>(`status|${project.path}`, TTL_MS, async () => {
+        const ttl = isWatched(project.path) ? WATCHED_TTL_MS : TTL_MS;
+        const summary = await cached<ProjectSummary>(`status|${project.path}`, ttl, async () => {
           const data = await runBd(["status"], project.path);
           return (data as { summary: ProjectSummary }).summary;
         });

@@ -63,6 +63,26 @@ sidebar section instead of cluttering the main project list. Projects whose
 `.beads` exists but no longer works with the installed `bd` (e.g. a stale
 pre-dolt database) land under **Broken** with a warning marker.
 
+### Live updates
+
+The dashboard refreshes the open board every few seconds. By default each
+refresh re-runs `bd list`. With beads 1.3 or newer you can switch on the
+[events journal](https://beads.gascity.com/reference/events-journal) in a
+project:
+
+```sh
+bd config set events-journal true
+```
+
+While that project's board is open, view-beads then follows
+`bd events tail --follow` and only re-runs `bd` when the journal records a
+change, so refreshes are served from memory in between. Changes the journal
+doesn't record (a `bd dolt pull`, `bd sql` writes) still show up within 15
+seconds. The follower stops a minute after you leave the board.
+
+view-beads never turns the journal on itself: the setting lives in your
+project's `.beads/config.yaml` and applies to every `bd` command there.
+
 ### GitHub projects
 
 Pick repos from the GitHub settings panel (the gear button in the sidebar's GitHub group),
@@ -140,6 +160,7 @@ distribution channel.
 - `src/lib/config.ts` — local config file (repo selection), atomic writes
 - `src/lib/github.ts` — sparse-clone mirror of GitHub beads repos
 - `src/lib/cache.ts` — small TTL cache over `bd` output
+- `src/lib/events.ts` — follows the beads events journal for open boards
 - `src/app/api/*` — thin JSON endpoints
 - `src/components/*` — board, sidebar, issue drawer
 - `bin/view-beads.mjs` — CLI wrapper

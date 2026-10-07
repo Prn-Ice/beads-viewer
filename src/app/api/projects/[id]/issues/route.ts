@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { runBd } from "@/lib/bd";
 import { cached } from "@/lib/cache";
+import { watchProject, WATCHED_TTL_MS } from "@/lib/events";
 import { countChildren } from "@/lib/hierarchy";
 import type { BeadsIssue, IssueListResponse } from "@/lib/types";
 
@@ -43,7 +44,10 @@ export async function GET(
     return Response.json({ error: "scope must be 'open' or 'all'" }, { status: 400 });
   }
 
-  const data = await cached<IssueListResponse>(`list|${path}|${scope}`, TTL_MS, async () => {
+  // An open board follows the project's events journal when it can; journal
+  // records clear the cache, so polls are served from memory in between.
+  const ttl = watchProject(path) ? WATCHED_TTL_MS : TTL_MS;
+  const data = await cached<IssueListResponse>(`list|${path}|${scope}`, ttl, async () => {
     const args = ["list", "--limit", "0"];
     if (scope === "all") args.push("--all");
     const [issuesRaw, readyRaw] = await Promise.all([
