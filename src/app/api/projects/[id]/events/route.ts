@@ -2,12 +2,13 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { subscribe } from "@/lib/events";
 
-const HEARTBEAT_MS = 20_000;
+const HEARTBEAT_MS = 15_000;
 
 // Server-Sent Events for one project's board. Sends `live` when changes will be
 // pushed (the board can stop polling), `polling` when they can't, and `change`
-// when the board should reload. Heartbeats keep proxies and tunnels from
-// closing an idle stream.
+// when the board should reload. `heartbeat` events keep proxies from closing
+// an idle stream and let the board notice one that buffers (Cloudflare quick
+// tunnels hold the whole stream back).
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -30,7 +31,7 @@ export async function GET(
         }
       };
       const unsubscribe = subscribe(path, (event) => write(`event: ${event}\ndata: {}\n\n`));
-      const heartbeat = setInterval(() => write(": heartbeat\n\n"), HEARTBEAT_MS);
+      const heartbeat = setInterval(() => write("event: heartbeat\ndata: {}\n\n"), HEARTBEAT_MS);
       cleanup = () => {
         clearInterval(heartbeat);
         unsubscribe();

@@ -28,6 +28,9 @@ import {
 import type { IssueListResponse, Project } from "@/lib/types";
 
 const POLL_MS = 3_000;
+// The board trusts its event stream only while events (at least the server's
+// 15-second heartbeat) keep arriving; a buffering proxy can't stall it.
+const STREAM_STALE_MS = 35_000;
 
 interface LoadedBoard {
   projectId: string;
@@ -52,6 +55,7 @@ export function Dashboard() {
   const [boardKey, setBoardKey] = useState(0);
   const [visible, setVisible] = useState(true);
   const boardPushed = useRef(false);
+  const lastStreamEvent = useRef(0);
   const [sessions, setSessions] = useState<Record<string, ObservedSession>>({});
   // Drawer Back trail: stack of issue ids reached by relationship navigation in
   // the current project. Tracked per project so a stale trail can never bleed
@@ -211,6 +215,10 @@ export function Dashboard() {
   useEffect(() => {
     if (!selectedId || !visible || typeof EventSource === "undefined") return;
     const source = new EventSource(`/api/projects/${encodeURIComponent(selectedId)}/events`);
+    const seen = () => {
+      lastStreamEvent.current = Date.now();
+    };
+    for (const event of ["live", "polling", "change", "heartbeat"]) source.addEventListener(event, seen);
     source.addEventListener("live", () => {
       // Reload once in case something changed before the stream was live.
       if (!boardPushed.current) setBoardKey((k) => k + 1);
@@ -234,7 +242,8 @@ export function Dashboard() {
     let timer: ReturnType<typeof setInterval> | undefined;
     function tick() {
       setReloadKey((k) => k + 1);
-      if (!boardPushed.current) setBoardKey((k) => k + 1);
+      const pushed = boardPushed.current && Date.now() - lastStreamEvent.current < STREAM_STALE_MS;
+      if (!pushed) setBoardKey((k) => k + 1);
     }
     function updatePolling() {
       clearInterval(timer);
