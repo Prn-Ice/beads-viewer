@@ -85,6 +85,18 @@ counts still refresh every few seconds.
 view-beads never turns the journal on itself: the setting lives in your
 project's `.beads/config.yaml` and applies to every `bd` command there.
 
+Projects whose database runs on a Dolt server (`dolt_mode: server` in
+`.beads/metadata.json`) get more: while their board is open, view-beads starts
+`bd serve` on a free loopback port and reads the board and project counts over
+its HTTP API (milliseconds instead of a `bd` process per read), with or without
+the journal. With the journal on, changes arrive through `bd serve`'s event
+stream. If `bd serve` won't start (older `bd`, Dolt server down), view-beads
+quietly uses the CLI instead. It never starts a Dolt server for you.
+
+Viewers of a [shared](#sharing) dashboard keep polling every few seconds:
+Cloudflare quick tunnels hold event streams back, so the board only trusts a
+stream while its heartbeats arrive on time.
+
 ### GitHub projects
 
 Pick repos from the GitHub settings panel (the gear button in the sidebar's GitHub group),
@@ -163,6 +175,8 @@ distribution channel.
 - `src/lib/github.ts` — sparse-clone mirror of GitHub beads repos
 - `src/lib/cache.ts` — small TTL cache over `bd` output
 - `src/lib/events.ts` — follows the beads events journal for open boards
+- `src/lib/serve.ts` — runs `bd serve` for server-mode projects
+- `src/lib/issues.ts` — board reads, through `bd serve` when it runs
 - `src/app/api/*` — thin JSON endpoints
 - `src/components/*` — board, sidebar, issue drawer
 - `bin/view-beads.mjs` — CLI wrapper

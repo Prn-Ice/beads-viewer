@@ -79,7 +79,9 @@ See [worker setup](docs/workers.md) for worktree preparation and test ports.
 - `src/lib/github.ts` — mirrors GitHub beads repos as sparse clones (auth via `gh`)
 - `src/lib/config.ts` — local config file (repo selection), read per request, atomic writes
 - `src/lib/cache.ts` — tiny TTL cache for bd output; `clearProject` drops one project's entries
-- `src/lib/events.ts` — follows `bd events tail --follow` for open boards whose journal is on, feeds the board event stream
+- `src/lib/events.ts` — follows the events journal for open boards (via `bd serve`'s `events:watch`, else `bd events tail --follow`), feeds the board event stream
+- `src/lib/serve.ts` — starts `bd serve --addr 127.0.0.1:0` for server-mode projects (`dolt_mode` in `.beads/metadata.json`), idles it out, kills it on exit
+- `src/lib/issues.ts` — board list/ready/status reads: `bd serve` HTTP when running, CLI otherwise
 - `src/app/api/*` — JSON endpoints; no DB, thin wrappers over `bd`
 - `src/app/page.tsx` + `src/components/*` — client UI (sidebar, board, drawer)
 - `bin/view-beads.mjs` — CLI: start/reuse server, print link, open browser
@@ -96,7 +98,14 @@ every 15 seconds for unjournaled changes (syncs, `bd sql`), and board/status
 cache entries for watched projects last 15 seconds. Hidden tabs close the
 stream; followers stop after a minute without listeners or board requests,
 retry a minute after failing (journal off, older `bd`), and are killed when the
-server exits. The sidebar keeps its 3-second poll. view-beads never enables the journal itself.
+server exits. The sidebar keeps its 3-second poll. Server-mode projects
+(`dolt_mode: server`) also run `bd serve` while their board is open: board and
+status reads use its HTTP API (`sort=priority` matches `bd list` order), and
+its `events:watch` stream replaces `bd events tail` when the journal is on. A
+409 restarts serve once (it only notices the journal at startup); a failed
+serve falls back to the CLI. The stream sends a `heartbeat` event every 15
+seconds and the board only skips polls while events arrive within 35 seconds,
+because Cloudflare quick tunnels buffer SSE (shared viewers keep polling). view-beads never enables the journal itself.
 
 `bd` binary location is resolved via `BEADS_BIN` env (default: `bd` from
 PATH). Project discovery roots come from `BEADS_PROJECT_ROOTS` (comma
