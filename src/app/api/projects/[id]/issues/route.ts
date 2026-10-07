@@ -1,9 +1,9 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { runBd } from "@/lib/bd";
 import { cached } from "@/lib/cache";
 import { watchProject, WATCHED_TTL_MS } from "@/lib/events";
 import { countChildren } from "@/lib/hierarchy";
+import { listIssues } from "@/lib/issues";
 import type { BeadsIssue, IssueListResponse } from "@/lib/types";
 
 const TTL_MS = 1_000;
@@ -48,19 +48,17 @@ export async function GET(
   // records clear the cache, so polls are served from memory in between.
   const ttl = watchProject(path) ? WATCHED_TTL_MS : TTL_MS;
   const data = await cached<IssueListResponse>(`list|${path}|${scope}`, ttl, async () => {
-    const args = ["list", "--limit", "0"];
-    if (scope === "all") args.push("--all");
-    const [issuesRaw, readyRaw] = await Promise.all([
-      runBd(args, path),
-      runBd(["list", "--limit", "0", "--ready"], path),
+    const [issues, ready] = await Promise.all([
+      listIssues(path, { all: scope === "all" }),
+      listIssues(path, { ready: true }),
     ]);
     // Child counts come from the all-status list so they stay complete when the
     // open scope hides closed children. Reuse the payload for the all scope.
-    const allRaw = scope === "all" ? issuesRaw : await runBd(["list", "--limit", "0", "--all"], path);
+    const all = scope === "all" ? issues : await listIssues(path, { all: true });
     return {
-      issues: (issuesRaw as BeadsIssue[]).map(lightIssue),
-      readyIds: (readyRaw as BeadsIssue[]).map((issue) => issue.id),
-      childCounts: countChildren(allRaw as BeadsIssue[]),
+      issues: issues.map(lightIssue),
+      readyIds: ready.map((issue) => issue.id),
+      childCounts: countChildren(all),
     };
   });
 

@@ -1,10 +1,12 @@
-import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cached, clearCache } from "./cache";
 import { isWatched, stopAllWatchers, subscribe, watchProject, type WatchEvent } from "./events";
+import { listIssues } from "./issues";
+import { serveUrl, stopAllServers } from "./serve";
 
 const FAKE_BD = fileURLToPath(new URL("../../tests/fixtures/fake-bd.mjs", import.meta.url));
 const ORIGINAL_ENV = { ...process.env };
@@ -14,7 +16,7 @@ let journal: string;
 let log: string;
 
 async function until(check: () => boolean | Promise<boolean>): Promise<void> {
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 500; i++) {
     if (await check()) return;
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
@@ -22,6 +24,14 @@ async function until(check: () => boolean | Promise<boolean>): Promise<void> {
 }
 
 function followerRuns(): string[] {
+  return bdRuns().filter((run) => run.startsWith("events "));
+}
+
+function listRuns(): string[] {
+  return bdRuns().filter((run) => run.startsWith("list "));
+}
+
+function bdRuns(): string[] {
   return existsSync(log) ? readFileSync(log, "utf8").split("\n").filter(Boolean) : [];
 }
 
@@ -39,6 +49,7 @@ beforeEach(() => {
 
 afterEach(() => {
   stopAllWatchers();
+  stopAllServers();
   clearCache();
   vi.useRealTimers();
   process.env = { ...ORIGINAL_ENV };
@@ -131,5 +142,45 @@ describe("subscribe", () => {
     writeFileSync(data, JSON.stringify(fixture));
     vi.advanceTimersByTime(15_000);
     await until(() => events.includes("change"));
+  });
+});
+
+describe("server-mode projects", () => {
+  beforeEach(() => {
+    mkdirSync(join(dir, ".beads"));
+    writeFileSync(join(dir, ".beads", "metadata.json"), JSON.stringify({ dolt_mode: "server" }));
+  });
+
+  it("follow the journal through bd serve and read without spawning bd", async () => {
+    process.env.FAKE_BD_EVENTS = journal;
+    const events: WatchEvent[] = [];
+    subscribe(dir, (event) => events.push(event));
+    await until(() => events.includes("live"));
+    expect(bdRuns()).toContain("serve --addr 127.0.0.1:0");
+    expect(followerRuns()).toEqual([]);
+
+    const issues = await listIssues(dir, { all: true });
+    expect(issues.map((issue) => issue.id)).toContain("alpha-1");
+    expect(listRuns()).toEqual([]);
+
+    record(1);
+    await until(() => events.includes("change"));
+  });
+
+  it("still read through bd serve when the journal is off", async () => {
+    delete process.env.FAKE_BD_EVENTS;
+    expect(watchProject(dir)).toBe(false);
+    await until(() => serveUrl(dir) !== null);
+    await listIssues(dir, { ready: true });
+    expect(listRuns()).toEqual([]);
+  });
+
+  it("fall back to the CLI follower when bd serve won't start", async () => {
+    process.env.FAKE_BD_EVENTS = journal;
+    process.env.FAKE_BD_SERVE_FAIL = "1";
+    const events: WatchEvent[] = [];
+    subscribe(dir, (event) => events.push(event));
+    await until(() => events.includes("live") && followerRuns().length === 1);
+    expect(followerRuns()).toEqual(["events tail --since 0 --follow --json"]);
   });
 });
