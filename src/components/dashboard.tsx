@@ -46,7 +46,12 @@ export function Dashboard() {
   const [githubLoaded, setGithubLoaded] = useState(false);
   const [board, setBoard] = useState<LoadedBoard | null>(null);
   const [boardError, setBoardError] = useState<string | null>(null);
+  // reloadKey refreshes the sidebar; boardKey refreshes the selected board,
+  // which skips poll ticks while the server pushes its changes instead.
   const [reloadKey, setReloadKey] = useState(0);
+  const [boardKey, setBoardKey] = useState(0);
+  const [visible, setVisible] = useState(true);
+  const boardPushed = useRef(false);
   const [sessions, setSessions] = useState<Record<string, ObservedSession>>({});
   // Drawer Back trail: stack of issue ids reached by relationship navigation in
   // the current project. Tracked per project so a stale trail can never bleed
@@ -198,20 +203,51 @@ export function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, [selectedId, view.scope, reloadKey]);
+  }, [selectedId, view.scope, boardKey]);
+
+  // The project's event stream says whether board changes are pushed (`live`)
+  // or must be polled (`polling`), and sends `change` when the board should
+  // reload. Hidden tabs close it so the server can stop following the project.
+  useEffect(() => {
+    if (!selectedId || !visible || typeof EventSource === "undefined") return;
+    const source = new EventSource(`/api/projects/${encodeURIComponent(selectedId)}/events`);
+    source.addEventListener("live", () => {
+      // Reload once in case something changed before the stream was live.
+      if (!boardPushed.current) setBoardKey((k) => k + 1);
+      boardPushed.current = true;
+    });
+    source.addEventListener("polling", () => {
+      boardPushed.current = false;
+    });
+    source.addEventListener("change", () => setBoardKey((k) => k + 1));
+    // EventSource reconnects by itself; poll until it says `live` again.
+    source.onerror = () => {
+      boardPushed.current = false;
+    };
+    return () => {
+      source.close();
+      boardPushed.current = false;
+    };
+  }, [selectedId, visible]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | undefined;
+    function tick() {
+      setReloadKey((k) => k + 1);
+      if (!boardPushed.current) setBoardKey((k) => k + 1);
+    }
     function updatePolling() {
       clearInterval(timer);
       if (document.visibilityState === "visible") {
-        timer = setInterval(() => setReloadKey((k) => k + 1), POLL_MS);
+        timer = setInterval(tick, POLL_MS);
       }
     }
     function onVisibilityChange() {
       updatePolling();
+      setVisible(document.visibilityState === "visible");
       if (document.visibilityState === "visible") {
         setReloadKey((k) => k + 1);
+        setBoardKey((k) => k + 1);
       }
     }
     updatePolling();
@@ -225,6 +261,7 @@ export function Dashboard() {
   async function refresh() {
     await fetch("/api/refresh", { method: "POST" }).catch(() => {});
     setReloadKey((k) => k + 1);
+    setBoardKey((k) => k + 1);
   }
 
   // After the settings panel saves a new repo selection, drop the current

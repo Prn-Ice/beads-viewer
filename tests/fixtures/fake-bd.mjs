@@ -1,14 +1,23 @@
 #!/usr/bin/env node
 // Fake bd for tests: answers subcommands from tests/fixtures/beads-data.json.
 // Supports: list [--ready] [--all], status, show <id>, comments <id>, fail, badjson.
-// The events journal is on when FAKE_BD_EVENTS points at a JSON Lines file:
-// `events tail --since N --follow` prints its records past N and keeps
-// printing lines appended to it until killed.
+// The events journal is on when FAKE_BD_EVENTS points at a JSON Lines file
+// (or the project has .beads/fake-events.jsonl): `events tail --since N
+// --follow` prints its records past N and keeps printing lines appended to it
+// until killed. FAKE_BD_DATA (or .beads/fake-data.json) swaps in other data.
 
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const localData = join(process.cwd(), ".beads", "fake-data.json");
+const localJournal = join(process.cwd(), ".beads", "fake-events.jsonl");
+const journal = process.env.FAKE_BD_EVENTS ?? (existsSync(localJournal) ? localJournal : null);
 
 const data = JSON.parse(
-  readFileSync(new URL("./beads-data.json", import.meta.url), "utf8"),
+  readFileSync(
+    process.env.FAKE_BD_DATA ?? (existsSync(localData) ? localData : new URL("./beads-data.json", import.meta.url)),
+    "utf8",
+  ),
 );
 
 const args = process.argv.slice(2);
@@ -40,7 +49,7 @@ switch (command) {
     print(data.comments[rest[0]] ?? []);
     break;
   case "config":
-    print({ key: rest[1], value: process.env.FAKE_BD_EVENTS ? "true" : "false" });
+    print({ key: rest[1], value: journal ? "true" : "false" });
     break;
   case "events":
     followEvents(Number(rest[rest.indexOf("--since") + 1]));
@@ -58,7 +67,7 @@ switch (command) {
 }
 
 function followEvents(since) {
-  const file = process.env.FAKE_BD_EVENTS;
+  const file = journal;
   if (process.env.FAKE_BD_LOG) appendFileSync(process.env.FAKE_BD_LOG, `${args.join(" ")}\n`);
   let printed = 0;
   const flush = () => {

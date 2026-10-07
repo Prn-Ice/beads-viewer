@@ -1,10 +1,10 @@
-import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cached, clearCache } from "./cache";
-import { isWatched, stopAllWatchers, watchProject } from "./events";
+import { isWatched, stopAllWatchers, subscribe, watchProject, type WatchEvent } from "./events";
 
 const FAKE_BD = fileURLToPath(new URL("../../tests/fixtures/fake-bd.mjs", import.meta.url));
 const ORIGINAL_ENV = { ...process.env };
@@ -87,3 +87,49 @@ describe("watchProject", () => {
   });
 });
 
+describe("subscribe", () => {
+  it("only reports polling when the journal is off", async () => {
+    delete process.env.FAKE_BD_EVENTS;
+    const events: WatchEvent[] = [];
+    const unsubscribe = subscribe(dir, (event) => events.push(event));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    unsubscribe();
+    expect(events).toEqual(["polling"]);
+  });
+
+  it("goes live and pushes one change per burst of records", async () => {
+    process.env.FAKE_BD_EVENTS = journal;
+    const events: WatchEvent[] = [];
+    const unsubscribe = subscribe(dir, (event) => events.push(event));
+    await until(() => events.includes("live"));
+    expect(events).toEqual(["polling", "live"]);
+
+    record(1);
+    record(2);
+    record(3);
+    await until(() => events.includes("change"));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    unsubscribe();
+    expect(events).toEqual(["polling", "live", "change"]);
+  });
+
+  it("pushes a change the journal never recorded", async () => {
+    const data = join(dir, "data.json");
+    const fixture = JSON.parse(readFileSync(new URL("../../tests/fixtures/beads-data.json", import.meta.url), "utf8"));
+    writeFileSync(data, JSON.stringify(fixture));
+    process.env.FAKE_BD_DATA = data;
+    process.env.FAKE_BD_EVENTS = journal;
+    vi.useFakeTimers({ toFake: ["Date", "setInterval"] });
+    const events: WatchEvent[] = [];
+    subscribe(dir, (event) => events.push(event));
+    await until(() => events.includes("live"));
+
+    // The first re-check sets the baseline; the second sees the edit.
+    vi.advanceTimersByTime(15_000);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    fixture.list[0].title = "Edited by a sync";
+    writeFileSync(data, JSON.stringify(fixture));
+    vi.advanceTimersByTime(15_000);
+    await until(() => events.includes("change"));
+  });
+});

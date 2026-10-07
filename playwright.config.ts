@@ -8,6 +8,7 @@ if (!Number.isInteger(port) || port < 1024 || port > 65526) {
   throw new Error("E2E_PORT must be an integer from 1024 to 65526 (reserves ten ports)");
 }
 const baseURL = `http://127.0.0.1:${port}`;
+const liveRoot = path.join(os.tmpdir(), `view-beads-e2e-live-${port}`);
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -23,7 +24,8 @@ export default defineConfig({
     env: {
       BEADS_BIN: path.join(fixtureDir, "fake-bd.mjs"),
       BEADS_HOME: fixtureDir,
-      BEADS_PROJECT_ROOTS: path.join(fixtureDir, "projects"),
+      // The second root starts empty; live-updates.spec.ts adds a project to it.
+      BEADS_PROJECT_ROOTS: [path.join(fixtureDir, "projects"), liveRoot].join(","),
       CLOUDFLARED_BIN: path.join(fixtureDir, "fake-cloudflared.mjs"),
       // Keep settings writes (share panel, github panel) out of the real config.
       VIEW_BEADS_CONFIG: path.join(os.tmpdir(), "view-beads-e2e-config.json"),
