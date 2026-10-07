@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { gotoWithPausedClock, pauseClockAt } from "./paused-clock";
 
 test("board polls every three seconds, pauses when hidden, and refreshes on return", async ({ page }) => {
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  await pauseClockAt(page);
   let projectRequests = 0;
   let boardRequests = 0;
   await page.route("**/api/projects", async (route) => {
@@ -16,7 +16,7 @@ test("board polls every three seconds, pauses when hidden, and refreshes on retu
     data.issues.find((issue: { id: string }) => issue.id === "alpha-1").title = `Updated issue ${version}`;
     await route.fulfill({ response, json: data });
   });
-  await page.goto("/");
+  await gotoWithPausedClock(page);
   await expect(page.getByRole("button", { name: /Updated issue 1/ })).toBeVisible();
   await page.clock.runFor(2999);
   expect(boardRequests).toBe(1);

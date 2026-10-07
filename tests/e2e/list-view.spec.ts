@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { BeadsIssue, IssueListResponse } from "../../src/lib/types";
 import fixture from "../fixtures/beads-data.json";
+import { gotoWithPausedClock, pauseClockAt } from "./paused-clock";
 
 function makeIssue(overrides: Partial<BeadsIssue>): BeadsIssue {
   return {
@@ -333,8 +334,7 @@ test.describe("list view", () => {
 
   test("polling preserves list sort and focused control", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.clock.install();
-    await page.clock.pauseAt(new Date());
+    await pauseClockAt(page);
     let version = 0;
     // Serve modified copies of the fixture directly instead of re-reading a
     // live response, which can be disposed mid-handler when polling supersedes
@@ -348,7 +348,7 @@ test.describe("list view", () => {
         json: { issues, readyIds: fixture.ready.map((r) => r.id), childCounts: {} } satisfies IssueListResponse,
       });
     });
-    await page.goto("/");
+    await gotoWithPausedClock(page);
     await openListView(page);
 
     // Sort by ID descending: alpha-4, alpha-3, alpha-2, alpha-1.

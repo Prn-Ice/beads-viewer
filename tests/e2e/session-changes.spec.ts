@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { BeadsIssue } from "../../src/lib/types";
+import { gotoWithPausedClock, pauseClockAt } from "./paused-clock";
 
 const START = Date.parse("2026-09-08T12:00:00Z");
 function issue(id: string, title: string, extra: Partial<BeadsIssue> = {}): BeadsIssue {
@@ -7,8 +8,7 @@ function issue(id: string, title: string, extra: Partial<BeadsIssue> = {}): Bead
 }
 
 async function setup(page: Page) {
-  await page.clock.install({ time: new Date(START) });
-  await page.clock.pauseAt(new Date(START));
+  await pauseClockAt(page, new Date(START));
   const control = {
     alpha: [issue("session-a", "Initial task"), issue("old-closed", "Old closed task", { status: "closed" })],
     beta: [issue("session-b", "Other project task")],
@@ -24,7 +24,7 @@ async function setup(page: Page) {
     await route.fulfill({ json: { issues, readyIds: issues.map((item) => item.id), childCounts: {} } });
   });
   await page.route("**/issues/session-a", (route) => route.fulfill({ json: control.alpha[0] }));
-  await page.goto("/");
+  await gotoWithPausedClock(page);
   await expect(page.getByRole("region", { name: "Issue board" }).getByRole("button", { name: /Initial task/ })).toBeVisible();
   return control;
 }
