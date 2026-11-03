@@ -31,6 +31,11 @@ nix run github:Prn-Ice/beads-viewer
 inputs.view-beads.packages.x86_64-linux.default
 ```
 
+The Nix launcher uses a nonempty `BEADS_BIN` first, then `bd` from your
+runtime `PATH`, and finally the bundled `bd` if neither is available. Use a
+`bd` version compatible with your projects' database schema; the bundled
+version may be older than the one you have installed.
+
 ## Usage
 
 ```sh
@@ -41,6 +46,10 @@ view-beads --no-open  # only print the link
 
 The server keeps running in the background. Running `view-beads` again reuses
 it and just re-opens the browser.
+
+After changing `BEADS_BIN`, your `PATH`, or the installed `bd` version, stop
+the existing view-beads server and run `view-beads` again. Reusing a running
+server does not update its environment or switch its selected `bd` binary.
 
 Use **Copy as Markdown** in an issue drawer to copy its loaded details for an
 agent handoff or PR discussion. Comments are excluded.
@@ -143,6 +152,7 @@ See [asset sources and licenses](public/brand/README.md) for branding credits.
 nix develop       # node, git, playwright with browsers
 npm run dev       # dev server on http://localhost:3000
 npm test          # unit tests (vitest)
+npm run test:nix-launcher # Nix launcher regression tests (requires nix)
 npm run test:e2e  # integration tests (playwright)
 npm run lint      # eslint
 npm run build     # production build (.next/standalone)
