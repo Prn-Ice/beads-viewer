@@ -27,6 +27,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:nix-launcher": "node --test scripts/nix-launcher.test.mjs",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "view-beads": "node bin/view-beads.mjs",

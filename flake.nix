@@ -58,7 +58,9 @@
               cp bin/view-beads.mjs $out/lib/view-beads/view-beads.mjs
               cat > $out/bin/view-beads <<EOF
               #!${pkgs.runtimeShell}
-              export BEADS_BIN="${lib.getExe pkgs.beads}"
+              if [ -z "\''${BEADS_BIN:-}" ]; then
+                export BEADS_BIN="\$(command -v bd || printf '%s' '${lib.getExe pkgs.beads}')"
+              fi
               export VIEW_BEADS_SERVER="$out/lib/view-beads/server.js"
               exec ${lib.getExe pkgs.nodejs_24} "$out/lib/view-beads/view-beads.mjs" "\$@"
               EOF
